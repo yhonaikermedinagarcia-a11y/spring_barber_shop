@@ -18,6 +18,24 @@ pool.query('SELECT NOW()', (err, res) => {
   }
 });
 
+// Ejecuta `fn` dentro de una transacción: si lanza, se hace ROLLBACK y se libera el cliente.
+// Útil para lecturas + validaciones + escritura que deben ser atómicas (ej. evitar double-booking).
+const withTransaction = async (fn) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const resultado = await fn(client);
+    await client.query('COMMIT');
+    return resultado;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   query: (text, params) => pool.query(text, params),
+  withTransaction,
 };
