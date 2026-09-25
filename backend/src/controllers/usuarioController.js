@@ -72,8 +72,73 @@ const crearUsuario = async (req, res) => {
   }
 };
 
+
+
+// 4. Actualizar un usuario por ID
+const actualizarUsuario = async (req, res) => {
+  const { id } = req.params;
+  const { nombre, apellido, correo, telefono, rol, clave } = req.body;
+
+  try {
+    const query = `
+      UPDATE usuario
+      SET nombre = COALESCE($1, nombre),
+          apellido = COALESCE($2, apellido),
+          correo = COALESCE($3, correo),
+          telefono = COALESCE($4, telefono),
+          rol = COALESCE($5, rol),
+          clave = COALESCE($6, clave)
+      WHERE "usuarioID" = $7
+      RETURNING "usuarioID", nombre, apellido, correo, telefono, rol;
+    `;
+    const valores = [nombre, apellido, correo, telefono, rol, clave, id];
+    const resultado = await db.query(query, valores);
+
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ ok: false, message: 'Usuario no encontrado' });
+    }
+
+    res.json({
+      ok: true,
+      message: 'Usuario actualizado exitosamente',
+      usuario: resultado.rows[0]
+    });
+  } catch (error) {
+    console.error('Error al actualizar usuario:', error);
+    res.status(500).json({ ok: false, error: 'Error interno del servidor' });
+  }
+};
+
+// 5. Eliminar un usuario por ID
+const eliminarUsuario = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const resultado = await db.query(
+      'DELETE FROM usuario WHERE "usuarioID" = $1 RETURNING "usuarioID"',
+      [id]
+    );
+
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ ok: false, message: 'Usuario no encontrado' });
+    }
+
+    res.json({
+      ok: true,
+      message: 'Usuario eliminado exitosamente',
+      usuarioID: resultado.rows[0].usuarioID
+    });
+  } catch (error) {
+    console.error('Error al eliminar usuario:', error);
+    res.status(500).json({ ok: false, error: 'Error interno del servidor' });
+  }
+};
+
+
 module.exports = {
   obtenerUsuarios,
   obtenerUsuarioPorId,
-  crearUsuario
+  crearUsuario,
+  actualizarUsuario,
+  eliminarUsuario
 };
