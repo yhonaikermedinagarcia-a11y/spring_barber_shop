@@ -22,10 +22,19 @@ const obtenerServicios = async (req, res) => {
 // 2. Obtener un servicio por ID
 const obtenerServicioPorId = async (req, res) => {
   const { id } = req.params;
+  const servicioId = Number(id);
+
+  if (!Number.isInteger(servicioId) || servicioId <= 0) {
+    return res.status(400).json({
+      ok: false,
+      message: 'El ID del servicio debe ser un número entero válido'
+    });
+  }
+
   try {
     const resultado = await db.query(
       'SELECT "serviciosID", nombre, descripcion, precio, duracion_minutos FROM servicios WHERE "serviciosID" = $1',
-      [id]
+      [servicioId]
     );
     if (resultado.rows.length === 0) {
       return res.status(404).json({ ok: false, message: 'Servicio no encontrado' });

@@ -32,6 +32,14 @@ app.get('/', (req, res) => {
   });
 });
 
+// Rutas no encontradas (debe ir después de montar los routers, antes de app.listen)
+app.use((req, res) => {
+  res.status(404).json({
+    ok: false,
+    message: 'Recurso no encontrado'
+  });
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);

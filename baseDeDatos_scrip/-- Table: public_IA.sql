@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS public.usuario
     telefono text COLLATE pg_catalog."default" NOT NULL,
     clave text COLLATE pg_catalog."default" NOT NULL,
     rol text COLLATE pg_catalog."default" NOT NULL,
-    CONSTRAINT usuario_pkey PRIMARY KEY ("usuarioID")
+    CONSTRAINT usuario_pkey PRIMARY KEY ("usuarioID"),
+    CONSTRAINT usuario_correo_key UNIQUE (correo)
 )
 TABLESPACE pg_default;
 
@@ -23,7 +24,8 @@ CREATE TABLE IF NOT EXISTS public.barbero
     "usuarioID" integer NOT NULL,
     comision numeric(5,2) NOT NULL,
     estado boolean NOT NULL,
-    CONSTRAINT barbero_pkey PRIMARY KEY ("barberoID")
+    CONSTRAINT barbero_pkey PRIMARY KEY ("barberoID"),
+    CONSTRAINT barbero_usuarioid_key UNIQUE ("usuarioID")
 )
 TABLESPACE pg_default;
 
@@ -36,7 +38,7 @@ CREATE TABLE IF NOT EXISTS public.servicios
 (
     "serviciosID" serial NOT NULL,
     nombre text COLLATE pg_catalog."default" NOT NULL,
-    "descripcion " text COLLATE pg_catalog."default" NOT NULL,
+    descripcion text COLLATE pg_catalog."default" NOT NULL,
     precio numeric(10,2) NOT NULL,
     duracion_minutos integer NOT NULL,
     CONSTRAINT servicios_pkey PRIMARY KEY ("serviciosID")
@@ -104,7 +106,9 @@ CREATE TABLE IF NOT EXISTS public.cita
     "servicioID" integer NOT NULL,
     fecha_inicio timestamp(0) without time zone NOT NULL,
     fecha_fin timestamp(0) without time zone NOT NULL,
-    CONSTRAINT cita_pkey PRIMARY KEY ("citaID")
+    estado text COLLATE pg_catalog."default" DEFAULT 'pendiente'::text NOT NULL,
+    CONSTRAINT cita_pkey PRIMARY KEY ("citaID"),
+    CONSTRAINT cita_estado_check CHECK (((estado)::text = ANY ((ARRAY['pendiente'::character varying, 'confirmada'::character varying, 'completada'::character varying, 'cancelada'::character varying])::text[])))
 )
 TABLESPACE pg_default;
 
