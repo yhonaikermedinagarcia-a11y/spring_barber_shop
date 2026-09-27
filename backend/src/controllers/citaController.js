@@ -3,6 +3,18 @@ const db = require('../config/db');
 // Estados permitidos (deben coincidir con el CHECK de la migración 001)
 const ESTADOS_VALIDOS = ['pendiente', 'confirmada', 'completada', 'cancelada'];
 
+// Días de la semana en el mismo formato que exige el CHECK horario_laboral_dia_check.
+// El índice corresponde a Date.getDay(): 0 = domingo.
+const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+
+const nombreDia = (fecha) => DIAS_SEMANA[fecha.getDay()];
+
+// Convierte una hora "HH:MM" o "HH:MM:SS" a minutos desde medianoche.
+const horaAMinutos = (hora) => {
+  const [h, m] = hora.split(':').map(Number);
+  return h * 60 + m;
+};
+
 // Error de negocio con código HTTP, para diferenciarlo de un fallo de PostgreSQL
 const errorHttp = (status, message) => {
   const error = new Error(message);
@@ -95,7 +107,36 @@ const crearCita = async (req, res) => {
       const { duracion_minutos: duracionMinutos } = servicioRes.rows[0];
       const fechaFin = new Date(fechaInicio.getTime() + duracionMinutos * 60 * 1000);
 
-      // C. Solapamiento: el intervalo [fecha_inicio, fecha_fin) de la nueva cita
+      // D. La cita debe caer dentro del horario laboral configurado para ese día.
+      //    Va dentro de la transacción y usa `client` para que la validación y el
+      //    INSERT sean atómicos.
+      const dia = nombreDia(fechaInicio);
+      const horarioRes = await client.query(
+        `SELECT hora_inicio, hora_fin
+         FROM horario_laboral
+         WHERE "barberoID" = $1 AND dia_semana = $2`,
+        [barberoId, dia]
+      );
+      if (horarioRes.rows.length === 0) {
+        throw errorHttp(400, `El barbero no tiene horario configurado para el ${dia}`);
+      }
+
+      const { hora_inicio: horaInicio, hora_fin: horaFin } = horarioRes.rows[0];
+
+      // Un servicio que termina de madrugada no se puede validar contra una franja
+      // horaria del mismo día, así que se rechaza explícitamente.
+      if (fechaFin.toDateString() !== fechaInicio.toDateString()) {
+        throw errorHttp(400, 'La cita no puede cruzar la medianoche');
+      }
+
+      const citaInicioMin = fechaInicio.getHours() * 60 + fechaInicio.getMinutes();
+      const citaFinMin = fechaFin.getHours() * 60 + fechaFin.getMinutes();
+
+      if (citaInicioMin < horaAMinutos(horaInicio) || citaFinMin > horaAMinutos(horaFin)) {
+        throw errorHttp(400, `La cita está fuera del horario laboral del barbero (${horaInicio} - ${horaFin})`);
+      }
+
+      // E. Solapamiento: el intervalo [fecha_inicio, fecha_fin) de la nueva cita
       //    contra las citas existentes del mismo barbero. Las canceladas no bloquean.
       const cruce = await client.query(
         `SELECT "citaID", fecha_inicio, fecha_fin
@@ -110,7 +151,7 @@ const crearCita = async (req, res) => {
         throw errorHttp(400, 'El barbero ya tiene una cita que se cruza con ese horario');
       }
 
-      // D. Insertar la nueva cita
+      // F. Insertar la nueva cita
       const insercion = await client.query(
         `INSERT INTO cita ("clienteID", "barberoID", "servicioID", fecha_inicio, fecha_fin, estado)
          VALUES ($1, $2, $3, $4, $5, 'pendiente')

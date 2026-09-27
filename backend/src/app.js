@@ -8,6 +8,9 @@ const servicioRoutes = require('./routes/servicioRoutes');
 const barberoRoutes = require('./routes/barberoRoutes');
 const citaRoutes = require('./routes/citaRoutes');
 const authRoutes = require('./routes/authRoutes');
+const horarioRoutes = require('./routes/horarioRoutes');
+const barberoServicioRoutes = require('./routes/barberoServicioRoutes');
+const transaccionRoutes = require('./routes/transaccionRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,6 +25,9 @@ app.use('/api/servicios', servicioRoutes);
 app.use('/api/barberos', barberoRoutes);
 app.use('/api/citas', citaRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/horarios', horarioRoutes);
+app.use('/api/barbero-servicios', barberoServicioRoutes);
+app.use('/api/transacciones', transaccionRoutes);
 
 // Ruta base
 app.get('/', (req, res) => {
