@@ -16,7 +16,7 @@ La API queda en `http://localhost:3000`.
 ## Migraciones
 
 El esquema se construye aplicando en orden los archivos `.sql` de
-`baseDeDatos_scrip/migraciones/`. El registro de cuáles se aplicó vive en la tabla
+`backend/migrations/`. El registro de cuáles se aplicó vive en la tabla
 `schema_migrations`.
 
 ```bash

@@ -4,7 +4,7 @@
  * Uso:  node scripts/migrate.js          aplica las pendientes
  *       node scripts/migrate.js --status  solo muestra el estado
  *
- * Las migraciones son archivos .sql en baseDeDatos_scrip/migraciones, numerados por
+ * Las migraciones son archivos .sql en backend/migrations, numerados por
  * prefijo y aplicadas en orden ascendente. Cada una debe ser idempotente, porque el
  * runner registra cuál se aplicó y solo salta las ya registradas.
  *
@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 
-const DIRECTORIO_MIGRACIONES = path.resolve(__dirname, '../../baseDeDatos_scrip/migraciones');
+const DIRECTORIO_MIGRACIONES = path.resolve(__dirname, '../migrations');
 const SOLO_ESTADO = process.argv.includes('--status');
 
 const pool = new Pool({
