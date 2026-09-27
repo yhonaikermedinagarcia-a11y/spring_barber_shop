@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public.transacciones
     monto numeric(10,2) NOT NULL,
     saldo_restante numeric(10,2) NOT NULL,
     referencia_pago text COLLATE pg_catalog."default" NOT NULL,
-    fecha_creacion timestamp(0) without time zone,
+    fecha_creacion timestamp(0) without time zone DEFAULT now() NOT NULL,
     CONSTRAINT transacciones_pkey PRIMARY KEY ("transaccionID")
 )
 
@@ -75,7 +75,10 @@ CREATE TABLE IF NOT EXISTS public.horario_laboral
     dia_semana text COLLATE pg_catalog."default" NOT NULL,
     hora_inicio time(0) without time zone NOT NULL,
     hora_fin time(0) without time zone NOT NULL,
-    CONSTRAINT horario_laboral_pkey PRIMARY KEY ("horarioID")
+    CONSTRAINT horario_laboral_pkey PRIMARY KEY ("horarioID"),
+    CONSTRAINT horario_laboral_barbero_dia_key UNIQUE ("barberoID", dia_semana),
+    CONSTRAINT horario_laboral_dia_check CHECK (((dia_semana)::text = ANY ((ARRAY['lunes'::character varying, 'martes'::character varying, 'miercoles'::character varying, 'jueves'::character varying, 'viernes'::character varying, 'sabado'::character varying, 'domingo'::character varying])::text[]))),
+    CONSTRAINT horario_laboral_rango_check CHECK ((hora_fin > hora_inicio))
 )
 
 TABLESPACE pg_default;
@@ -115,7 +118,8 @@ CREATE TABLE IF NOT EXISTS public.barbero_servicio
     "barbero_servicioID" serial NOT NULL,
     "barberoID" integer NOT NULL,
     "servicioID" integer NOT NULL,
-    CONSTRAINT barbero_servicio_pkey PRIMARY KEY ("barbero_servicioID")
+    CONSTRAINT barbero_servicio_pkey PRIMARY KEY ("barbero_servicioID"),
+    CONSTRAINT barbero_servicio_barbero_servicio_key UNIQUE ("barberoID", "servicioID")
 )
 
 TABLESPACE pg_default;
