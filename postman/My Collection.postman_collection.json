@@ -1,0 +1,372 @@
+{
+	"info": {
+		"_postman_id": "fec4f995-725c-4121-8112-210acdf5aefd",
+		"name": "My Collection",
+		"description": "### Welcome to Postman! This is your first collection. \n\nCollections are your starting point for building and testing APIs. You can use this one to:\n\n• Group related requests\n• Test your API in real-world scenarios\n• Document and share your requests\n\nUpdate the name and overview whenever you’re ready to make it yours.\n\n[Learn more about Postman Collections.](https://learning.postman.com/docs/collections/collections-overview/)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "58666352",
+		"_collection_link": "https://yhonaikermedinagarcia-649722.postman.co/workspace/Yhonaiker-Medina-Garc%C3%ADa's-Works~e9624814-b4b6-4235-8483-93bf666a8509/collection/58666352-fec4f995-725c-4121-8112-210acdf5aefd?action=share&source=collection_link&creator=58666352"
+	},
+	"item": [
+		{
+			"name": "crear usuario",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"if (jsonData.usuario && jsonData.usuario.usuarioID) {",
+							"    pm.environment.set(\"usuarioID\", jsonData.usuario.usuarioID);",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Yonai\",\n  \"apellido\": \"Medina\",\n  \"correo\": \"admin_{{$randomInt}}@barberia.com\",\n  \"telefono\": \"04121234567\",\n  \"clave\": \"123\",\n  \"rol\": \"administrador\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/usuarios",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"usuarios"
+					]
+				},
+				"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
+			},
+			"response": []
+		},
+		{
+			"name": "login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"if (jsonData.token) {",
+							"    pm.environment.set(\"token\", jsonData.token);",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "",
+						"value": "",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"correo\": \"admin@barberia.com\",\n  \"password\": \"123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/login",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Crear Barbero",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"var id = jsonData.barberoID || (jsonData.barbero && (jsonData.barbero.barberoID || jsonData.barbero.id)) || jsonData.id;",
+							"if (id) {",
+							"    pm.environment.set(\"barberoID\", id);",
+							"    console.log(\"barberoID guardado con éxito: \" + id);",
+							"} else {",
+							"    console.log(\"⚠️ No se encontró el barberoID en la respuesta:\", jsonData);",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"usuarioID\": {{usuarioID}},\n  \"comision\": 20.0,\n  \"activo\": true\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/barberos",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"barberos"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Crear Servicio",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"console.log(\"Respuesta de servicios:\", jsonData);",
+							"",
+							"// Obtiene el objeto interno 'servicio' o usa la raíz si viene plano",
+							"var servicioObj = jsonData.servicio || jsonData;",
+							"",
+							"// Busca la clave del ID (incluyendo serviciosID plural)",
+							"var id = servicioObj.serviciosID || servicioObj.servicioID || servicioObj.id || servicioObj._id;",
+							"",
+							"if (id) {",
+							"    pm.environment.set(\"servicioID\", id);",
+							"    console.log(\"servicioID guardado con éxito: \" + id);",
+							"} else {",
+							"    console.log(\"⚠️ No se pudo extraer el ID. Estructura:\", JSON.stringify(jsonData));",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Corte Clásico\",\n  \"descripcion\": \"Corte de cabello tradicional con máquina y tijera\",\n  \"precio\": 15.00,\n  \"duracion_minutos\": 30\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/servicios",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"servicios"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Crear Barbero-Servicio",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}}\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/barbero-servicios",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"barbero-servicios"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear horarios",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"barberoID\": {{barberoID}},\n  \"dia_semana\": \"Lunes\",\n  \"hora_inicio\": \"09:00\",\n  \"hora_fin\": \"17:00\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/horarios",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"horarios"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crear citas",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"clienteID\": {{usuarioID}},\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}},\n  \"fecha_hora\": \"2026-10-05 10:00:00\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/citas",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"citas"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
