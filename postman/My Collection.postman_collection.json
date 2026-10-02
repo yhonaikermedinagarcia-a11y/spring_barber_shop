@@ -1,372 +1,810 @@
 {
-	"info": {
-		"_postman_id": "fec4f995-725c-4121-8112-210acdf5aefd",
-		"name": "My Collection",
-		"description": "### Welcome to Postman! This is your first collection. \n\nCollections are your starting point for building and testing APIs. You can use this one to:\n\n• Group related requests\n• Test your API in real-world scenarios\n• Document and share your requests\n\nUpdate the name and overview whenever you’re ready to make it yours.\n\n[Learn more about Postman Collections.](https://learning.postman.com/docs/collections/collections-overview/)",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "58666352",
-		"_collection_link": "https://yhonaikermedinagarcia-649722.postman.co/workspace/Yhonaiker-Medina-Garc%C3%ADa's-Works~e9624814-b4b6-4235-8483-93bf666a8509/collection/58666352-fec4f995-725c-4121-8112-210acdf5aefd?action=share&source=collection_link&creator=58666352"
-	},
-	"item": [
-		{
-			"name": "crear usuario",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"var jsonData = pm.response.json();",
-							"if (jsonData.usuario && jsonData.usuario.usuarioID) {",
-							"    pm.environment.set(\"usuarioID\", jsonData.usuario.usuarioID);",
-							"}"
-						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
-					}
-				}
-			],
-			"request": {
-				"auth": {
-					"type": "noauth"
-				},
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json",
-						"type": "text"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"nombre\": \"Yonai\",\n  \"apellido\": \"Medina\",\n  \"correo\": \"admin_{{$randomInt}}@barberia.com\",\n  \"telefono\": \"04121234567\",\n  \"clave\": \"123\",\n  \"rol\": \"administrador\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{base_url}}/api/usuarios",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"usuarios"
-					]
-				},
-				"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
-			},
-			"response": []
-		},
-		{
-			"name": "login",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"var jsonData = pm.response.json();",
-							"if (jsonData.token) {",
-							"    pm.environment.set(\"token\", jsonData.token);",
-							"}"
-						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
-					}
-				}
-			],
-			"request": {
-				"auth": {
-					"type": "noauth"
-				},
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json",
-						"type": "text"
-					},
-					{
-						"key": "",
-						"value": "",
-						"type": "text",
-						"disabled": true
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"correo\": \"admin@barberia.com\",\n  \"password\": \"123\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{base_url}}/api/auth/login",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"auth",
-						"login"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Crear Barbero",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"var jsonData = pm.response.json();",
-							"var id = jsonData.barberoID || (jsonData.barbero && (jsonData.barbero.barberoID || jsonData.barbero.id)) || jsonData.id;",
-							"if (id) {",
-							"    pm.environment.set(\"barberoID\", id);",
-							"    console.log(\"barberoID guardado con éxito: \" + id);",
-							"} else {",
-							"    console.log(\"⚠️ No se encontró el barberoID en la respuesta:\", jsonData);",
-							"}"
-						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					},
-					{
-						"key": "Authorization",
-						"value": "Bearer {{token}}"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"usuarioID\": {{usuarioID}},\n  \"comision\": 20.0,\n  \"activo\": true\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{base_url}}/api/barberos",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"barberos"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Crear Servicio",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"var jsonData = pm.response.json();",
-							"console.log(\"Respuesta de servicios:\", jsonData);",
-							"",
-							"// Obtiene el objeto interno 'servicio' o usa la raíz si viene plano",
-							"var servicioObj = jsonData.servicio || jsonData;",
-							"",
-							"// Busca la clave del ID (incluyendo serviciosID plural)",
-							"var id = servicioObj.serviciosID || servicioObj.servicioID || servicioObj.id || servicioObj._id;",
-							"",
-							"if (id) {",
-							"    pm.environment.set(\"servicioID\", id);",
-							"    console.log(\"servicioID guardado con éxito: \" + id);",
-							"} else {",
-							"    console.log(\"⚠️ No se pudo extraer el ID. Estructura:\", JSON.stringify(jsonData));",
-							"}"
-						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
-					}
-				}
-			],
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "{{token}}",
-							"type": "string"
-						}
-					]
-				},
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"nombre\": \"Corte Clásico\",\n  \"descripcion\": \"Corte de cabello tradicional con máquina y tijera\",\n  \"precio\": 15.00,\n  \"duracion_minutos\": 30\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{base_url}}/api/servicios",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"servicios"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Crear Barbero-Servicio",
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "{{token}}",
-							"type": "string"
-						}
-					]
-				},
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}}\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{base_url}}/api/barbero-servicios",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"barbero-servicios"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "crear horarios",
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "{{token}}",
-							"type": "string"
-						}
-					]
-				},
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json",
-						"type": "text"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"barberoID\": {{barberoID}},\n  \"dia_semana\": \"Lunes\",\n  \"hora_inicio\": \"09:00\",\n  \"hora_fin\": \"17:00\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{base_url}}/api/horarios",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"horarios"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "crear citas",
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "{{token}}",
-							"type": "string"
-						}
-					]
-				},
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json",
-						"type": "text"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"clienteID\": {{usuarioID}},\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}},\n  \"fecha_hora\": \"2026-10-05 10:00:00\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{base_url}}/api/citas",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"api",
-						"citas"
-					]
-				}
-			},
-			"response": []
-		}
-	]
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "name": "Barbería API · E2E",
+    "description": "Flujo completo de la API de barbería.\n\nSe ejecuta en orden: cada request depende de las variables que los anteriores guardan (usuarioID, token, servicioID, barberoID, citaID).\n\nLa fecha de la cita y el día de la semana se calculan en el pre-request de la colección, de modo que las pruebas no se rompen al pasar el tiempo: siempre agenda un lunes a las 10:00, dentro del horario configurado (09:00-17:00).\n\nRequiere que JWT_SECRET esté definido en el backend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Calcula las fechas de prueba a partir del día de hoy, para que el flujo",
+          "// siga siendo válido cuando 2026-10-05 deje de ser lunes.",
+          "const DIAS = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];",
+          "const p = (n) => String(n).padStart(2, '0');",
+          "const iso = (d) => `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`;",
+          "",
+          "const hoy = new Date();",
+          "// (8 - getDay()) % 7 desplaza al lunes de esta semana; || 7 salta al siguiente",
+          "const diasAlLunes = (8 - hoy.getDay()) % 7 || 7;",
+          "const lunes = new Date(hoy);",
+          "lunes.setDate(hoy.getDate() + diasAlLunes);",
+          "lunes.setHours(10, 0, 0, 0);",
+          "",
+          "pm.environment.set('diaCita', DIAS[lunes.getDay()]);",
+          "pm.environment.set('fechaCita', iso(lunes));",
+          "",
+          "// 10 minutos después: se solapa con la cita de 10:00 (dura 30 min)",
+          "const solapada = new Date(lunes);",
+          "solapada.setMinutes(lunes.getMinutes() + 10);",
+          "pm.environment.set('fechaSolapada', iso(solapada));",
+          "",
+          "// 07:00 queda antes de que el barbero abra",
+          "const fueraHorario = new Date(lunes);",
+          "fueraHorario.setHours(7, 0, 0, 0);",
+          "pm.environment.set('fechaFueraHorario', iso(fueraHorario));"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 · Salud del servidor",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/", "host": ["{{base_url}}"], "path": [""] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('el servidor responde 200', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('devuelve ok:true', () => {",
+              "  pm.expect(pm.response.json().ok).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 · Crear usuario administrador",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Admin\",\n  \"apellido\": \"Prueba\",\n  \"correo\": \"admin_{{$timestamp}}{{$randomInt}}@barberia.com\",\n  \"telefono\": \"04121234567\",\n  \"clave\": \"clave123\",\n  \"rol\": \"administrador\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/usuarios", "host": ["{{base_url}}"], "path": ["api", "usuarios"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('crea el usuario con 201', () => {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test('devuelve ok:true', () => { pm.expect(json.ok).to.be.true; });",
+              "pm.test('no expone la clave en la respuesta', () => {",
+              "  pm.expect(json.usuario).to.not.have.property('clave');",
+              "});",
+              "pm.test('guarda usuarioID y correo para los siguientes pasos', () => {",
+              "  pm.expect(json.usuario.usuarioID).to.be.a('number');",
+              "  pm.environment.set('usuarioAdminID', json.usuario.usuarioID);",
+              "  pm.environment.set('adminCorreo', json.usuario.correo);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 · Crear usuario cliente",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Cliente\",\n  \"apellido\": \"Prueba\",\n  \"correo\": \"cliente_{{$timestamp}}{{$randomInt}}@barberia.com\",\n  \"telefono\": \"04129876543\",\n  \"clave\": \"clave123\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/usuarios", "host": ["{{base_url}}"], "path": ["api", "usuarios"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('crea el usuario con 201', () => { pm.response.to.have.status(201); });",
+              "const json = pm.response.json();",
+              "pm.test('el rol por defecto es cliente', () => {",
+              "  pm.expect(json.usuario.rol).to.eql('cliente');",
+              "});",
+              "pm.environment.set('usuarioClienteID', json.usuario.usuarioID);",
+              "pm.environment.set('clienteCorreo', json.usuario.correo);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 · Correo duplicado rechazado",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Duplicado\",\n  \"apellido\": \"Prueba\",\n  \"correo\": \"{{adminCorreo}}\",\n  \"telefono\": \"04120000000\",\n  \"clave\": \"otra\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/usuarios", "host": ["{{base_url}}"], "path": ["api", "usuarios"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('el UNIQUE de correo devuelve 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "pm.test('el mensaje explica el conflicto', () => {",
+              "  pm.expect(pm.response.json().message).to.include('correo');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 · Login administrador",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{adminCorreo}}\",\n  \"password\": \"clave123\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login devuelve 200', () => { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('devuelve un token JWT', () => {",
+              "  pm.expect(json.token).to.be.a('string');",
+              "  pm.expect(json.token.split('.')).to.have.lengthOf(3);",
+              "});",
+              "pm.test('no expone la clave', () => {",
+              "  pm.expect(json.usuario).to.not.have.property('clave');",
+              "});",
+              "pm.environment.set('token', json.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 · Login con clave incorrecta",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{adminCorreo}}\",\n  \"password\": \"claveIncorrecta\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('clave incorrecta devuelve 401', () => { pm.response.to.have.status(401); });",
+              "pm.test('el mensaje no revela si el correo existe', () => {",
+              "  pm.expect(pm.response.json().message).to.eql('Credenciales inválidas');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 · Login cliente",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{clienteCorreo}}\",\n  \"password\": \"clave123\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login del cliente devuelve 200', () => { pm.response.to.have.status(200); });",
+              "pm.environment.set('tokenCliente', pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 · Crear servicio",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Corte Clásico\",\n  \"descripcion\": \"Corte de cabello tradicional\",\n  \"precio\": 15,\n  \"duracion_minutos\": 30\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/servicios", "host": ["{{base_url}}"], "path": ["api", "servicios"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('crea el servicio con 201', () => { pm.response.to.have.status(201); });",
+              "const json = pm.response.json();",
+              "pm.test('guarda el serviciosID', () => {",
+              "  pm.expect(json.servicio.serviciosID).to.be.a('number');",
+              "  pm.environment.set('servicioID', json.servicio.serviciosID);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 · Crear barbero",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"usuarioID\": {{usuarioAdminID}},\n  \"comision\": 20.0\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/barberos", "host": ["{{base_url}}"], "path": ["api", "barberos"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('crea el barbero con 201', () => { pm.response.to.have.status(201); });",
+              "const json = pm.response.json();",
+              "pm.test('trae el nombre del usuario unido', () => {",
+              "  pm.expect(json.barbero.nombre).to.eql('Admin');",
+              "});",
+              "pm.environment.set('barberoID', json.barbero.barberoID);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 · Barbero duplicado rechazado",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"usuarioID\": {{usuarioAdminID}},\n  \"comision\": 30.0\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/barberos", "host": ["{{base_url}}"], "path": ["api", "barberos"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('el UNIQUE de barbero.usuarioID devuelve 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 · Crear horario laboral",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"barberoID\": {{barberoID}},\n  \"dia_semana\": \"{{diaCita}}\",\n  \"hora_inicio\": \"09:00\",\n  \"hora_fin\": \"17:00\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/horarios", "host": ["{{base_url}}"], "path": ["api", "horarios"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('guarda el horario con 201', () => { pm.response.to.have.status(201); });",
+              "const json = pm.response.json();",
+              "pm.test('el día se guarda normalizado a minúsculas', () => {",
+              "  pm.expect(json.horario.dia_semana).to.eql(pm.environment.get('diaCita'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 · Horario inválido rechazado",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"barberoID\": {{barberoID}},\n  \"dia_semana\": \"lunex\",\n  \"hora_inicio\": \"09:00\",\n  \"hora_fin\": \"17:00\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/horarios", "host": ["{{base_url}}"], "path": ["api", "horarios"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('un día inexistente devuelve 400', () => { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 · Asignar servicio al barbero",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}}\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/barbero-servicios", "host": ["{{base_url}}"], "path": ["api", "barbero-servicios"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('asigna el servicio con 201', () => { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 · Servicios del barbero",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/barbero-servicios/barbero/{{barberoID}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "barbero-servicios", "barbero", "{{barberoID}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('consulta pública devuelve 200', () => { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('lista el servicio asignado', () => {",
+              "  pm.expect(json.total).to.be.above(0);",
+              "  pm.expect(json.servicios[0].nombre).to.eql('Corte Clásico');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 · Horarios del barbero",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/horarios/barbero/{{barberoID}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "horarios", "barbero", "{{barberoID}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('consulta pública devuelve 200', () => { pm.response.to.have.status(200); });",
+              "pm.test('devuelve el horario creado', () => {",
+              "  pm.expect(pm.response.json().total).to.eql(1);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 · Crear cita dentro del horario",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteID\": {{usuarioClienteID}},\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}},\n  \"fecha_hora\": \"{{fechaCita}}\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/citas", "host": ["{{base_url}}"], "path": ["api", "citas"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('agenda la cita con 201', () => { pm.response.to.have.status(201); });",
+              "const json = pm.response.json();",
+              "pm.test('nace en estado pendiente', () => {",
+              "  pm.expect(json.cita.estado).to.eql('pendiente');",
+              "});",
+              "pm.test('la hora de fin cubre la duración del servicio (30 min)', () => {",
+              "  const ini = new Date(json.cita.fecha_inicio);",
+              "  const fin = new Date(json.cita.fecha_fin);",
+              "  pm.expect(fin - ini).to.eql(30 * 60 * 1000);",
+              "});",
+              "pm.environment.set('citaID', json.cita.citaID);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 · Cita solapada rechazada",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteID\": {{usuarioClienteID}},\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}},\n  \"fecha_hora\": \"{{fechaSolapada}}\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/citas", "host": ["{{base_url}}"], "path": ["api", "citas"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('una cita que se cruza devuelve 400', () => { pm.response.to.have.status(400); });",
+              "pm.test('el mensaje habla del solapamiento', () => {",
+              "  pm.expect(pm.response.json().message).to.include('se cruza');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 · Cita fuera del horario rechazada",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteID\": {{usuarioClienteID}},\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}},\n  \"fecha_hora\": \"{{fechaFueraHorario}}\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/citas", "host": ["{{base_url}}"], "path": ["api", "citas"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('una cita antes de la apertura devuelve 400', () => { pm.response.to.have.status(400); });",
+              "pm.test('el mensaje menciona el horario laboral', () => {",
+              "  pm.expect(pm.response.json().message).to.include('horario laboral');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 · Listar citas",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [],
+        "url": { "raw": "{{base_url}}/api/citas", "host": ["{{base_url}}"], "path": ["api", "citas"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('con token devuelve 200', () => { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('incluye los nombres del cliente y del barbero', () => {",
+              "  const cita = json.citas.find(c => c.citaID === pm.environment.get('citaID'));",
+              "  pm.expect(cita.cliente_nombre).to.eql('Cliente');",
+              "  pm.expect(cita.barbero_nombre).to.eql('Admin');",
+              "  pm.expect(cita.servicio_nombre).to.eql('Corte Clásico');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 · Citas sin token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/api/citas", "host": ["{{base_url}}"], "path": ["api", "citas"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('sin token devuelve 401', () => { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 · Cambiar estado de cita",
+      "request": {
+        "method": "PUT",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estado\": \"confirmada\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/citas/{{citaID}}/estado",
+          "host": ["{{base_url}}"],
+          "path": ["api", "citas", "{{citaID}}", "estado"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('cambia el estado con 200', () => { pm.response.to.have.status(200); });",
+              "pm.test('el estado queda actualizado', () => {",
+              "  pm.expect(pm.response.json().cita.estado).to.eql('confirmada');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 · Estado de cita inválido",
+      "request": {
+        "method": "PUT",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estado\": \"inventado\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/citas/{{citaID}}/estado",
+          "host": ["{{base_url}}"],
+          "path": ["api", "citas", "{{citaID}}", "estado"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('un estado fuera del CHECK devuelve 400', () => { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 · Rol insuficiente para cambiar estado",
+      "request": {
+        "method": "PUT",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenCliente}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estado\": \"completada\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/citas/{{citaID}}/estado",
+          "host": ["{{base_url}}"],
+          "path": ["api", "citas", "{{citaID}}", "estado"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('un cliente no puede cambiar el estado: 403', () => {",
+              "  pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24 · Transacciones exige rol administrador",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenCliente}}", "type": "string" }] },
+        "header": [],
+        "url": { "raw": "{{base_url}}/api/transacciones", "host": ["{{base_url}}"], "path": ["api", "transacciones"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('un cliente no ve el libro de saldo: 403', () => {",
+              "  pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25 · Registrar movimiento de saldo",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"usuarioID\": {{usuarioAdminID}},\n  \"tipo_movimiento\": \"recarga\",\n  \"monto\": 100,\n  \"saldo_restante\": 100,\n  \"referencia_pago\": \"PAG-E2E-001\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/transacciones", "host": ["{{base_url}}"], "path": ["api", "transacciones"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('registra el movimiento con 201', () => { pm.response.to.have.status(201); });",
+              "pm.test('fecha_creacion viene rellenada', () => {",
+              "  pm.expect(pm.response.json().transaccion.fecha_creacion).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "26 · Movimiento sin referencia rechazado",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"usuarioID\": {{usuarioAdminID}},\n  \"tipo_movimiento\": \"recarga\",\n  \"monto\": 50,\n  \"saldo_restante\": 150\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/transacciones", "host": ["{{base_url}}"], "path": ["api", "transacciones"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('referencia_pago es NOT NULL: devuelve 400 y no 500', () => {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "27 · ID no numérico",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/usuarios/abc",
+          "host": ["{{base_url}}"],
+          "path": ["api", "usuarios", "abc"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('un id no numérico devuelve 400, no 500', () => {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "28 · Recurso inexistente",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/api/no-existe", "host": ["{{base_url}}"], "path": ["api", "no-existe"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('el manejador global devuelve 404 en JSON', () => {",
+              "  pm.response.to.have.status(404);",
+              "  pm.expect(pm.response.json().ok).to.be.false;",
+              "  pm.expect(pm.response.json().message).to.eql('Recurso no encontrado');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
 }

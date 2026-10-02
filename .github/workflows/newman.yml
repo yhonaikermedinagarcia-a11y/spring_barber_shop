@@ -2,15 +2,14 @@ name: Pruebas E2E con Newman y Postman
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
   test-api:
     runs-on: ubuntu-latest
 
-    # Si tu backend usa PostgreSQL, levantamos una base de datos temporal en el contenedor
     services:
       postgres:
         image: postgres:15
@@ -26,6 +25,17 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    env:
+      DB_HOST: localhost
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: barberia_test
+      DB_PORT: 5432
+      PORT: 3000
+      # El login emite y verifica JWT con este secreto; la colección E2E no puede
+      # arrancar sin él, porque config/jwt.js falla al cargar si no está definido.
+      JWT_SECRET: clave-solo-para-ci
+
     steps:
       - name: Descargar código del repositorio
         uses: actions/checkout@v4
@@ -39,19 +49,52 @@ jobs:
         working-directory: ./backend
         run: npm install
 
-      - name: Iniciar servidor backend en segundo plano
+      # Sin este paso el servicio postgres arranca vacío y toda petición devuelve
+      # 500 por "relation ... does not exist".
+      - name: Aplicar migraciones
         working-directory: ./backend
-        env:
-          PORT: 3000
-          DB_HOST: localhost
-          DB_USER: postgres
-          DB_PASSWORD: password
-          DB_NAME: barberia_test
-          DB_PORT: 5432
-        run: |
-          npm start &
-          sleep 3
+        run: npm run migrate
 
-      - name: Ejecutar colección de Postman con Newman
+      - name: Iniciar el backend
+        working-directory: ./backend
         run: |
-          npx newman run "postman/My Collection.postman_collection.json" --env-var "base_url=http://localhost:3000"
+          npm start > server.log 2>&1 &
+          echo "servidor lanzado, log en backend/server.log"
+
+      # Un sleep fijo es frágil: el arranque abre la conexión a PostgreSQL y puede
+      # tardar más de lo esperado. Se espera a que el servidor responda de verdad.
+      - name: Esperar a que la API esté lista
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf "http://localhost:3000/" > /dev/null; then
+              echo "API lista tras ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::La API no respondió en 30 segundos"
+          echo "--- log del servidor ---"
+          cat backend/server.log 2>/dev/null || true
+          exit 1
+
+      - name: Ejecutar la colección con Newman
+        run: |
+          npx --yes newman run "postman/My Collection.postman_collection.json" \
+            --env-var "base_url=http://localhost:3000" \
+            --reporters cli,html \
+            --reporter-html-export newman-report.html \
+            --color off
+
+      # Se sube el informe aunque Newman falle, para poder abrirlo desde la
+      # pestaña Summary del run.
+      - name: Publicar informe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-report
+          path: newman-report.html
+          if-no-files-found: ignore
+
+      - name: Mostrar log del servidor si falló la suite
+        if: failure()
+        run: cat backend/server.log 2>/dev/null || echo "sin log del servidor"

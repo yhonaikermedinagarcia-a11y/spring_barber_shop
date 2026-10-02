@@ -197,11 +197,38 @@ Errores comunes:
 
 | Código | Significado |
 |---|---|
-| `400` | Solicitud inválida (datos faltantes o malformados) |
+| `400` | Solicitud inválida o conflicto de negocio (datos faltantes, correo duplicado, barbero repetido, cita solapada o fuera de horario) |
 | `401` | No autenticado (token ausente o inválido) |
 | `403` | Prohibido (rol insuficiente) |
 | `404` | Ruta o recurso inexistente |
-| `409` | Conflicto (duplicado, cita solapada) |
 | `500` | Error interno del servidor |
 
 > **Nota:** Las rutas no encontradas están manejadas globalmente y retornan un error 404 Not Found en formato JSON.
+
+## Pruebas E2E
+
+La colección de Postman (`postman/My Collection.postman_collection.json`) recorre
+los 8 módulos con 28 peticiones y 49 aserciones: el flujo completo, los 401 sin
+token, los 403 por rol insuficiente, los 400 de validación, los 404 y los casos de
+conflicto (correo duplicado, barbero repetido, cita solapada, cita fuera de
+horario).
+
+Las fechas se calculan en el pre-request de la colección a partir del día actual, de
+modo que siempre agenda el próximo lunes a las 10:00 dentro del horario configurado
+y la suite no caduca con el paso del tiempo. Los correos llevan `{{$timestamp}}` y
+`{{$randomInt}}`, así que la colección se puede reejecutar sobre la misma base.
+
+```bash
+# terminal 1: base de datos de pruebas y servidor
+cd backend
+DB_NAME=e2e_local npm run migrate
+DB_NAME=e2e_local JWT_SECRET=local npm start
+
+# terminal 2: la colección
+npx newman run "postman/My Collection.postman_collection.json" \
+  --env-var "base_url=http://localhost:3000"
+```
+
+En GitHub Actions corre sola en cada push y pull request: levanta PostgreSQL, aplica
+las migraciones, espera a que la API responda antes de probar y publica el informe
+HTML como artefacto aunque la suite falle.
