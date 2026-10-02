@@ -1,0 +1,57 @@
+name: Pruebas E2E con Newman y Postman
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+
+    # Si tu backend usa PostgreSQL, levantamos una base de datos temporal en el contenedor
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: barberia_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Descargar código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias del backend
+        working-directory: ./backend
+        run: npm install
+
+      - name: Iniciar servidor backend en segundo plano
+        working-directory: ./backend
+        env:
+          PORT: 3000
+          DB_HOST: localhost
+          DB_USER: postgres
+          DB_PASSWORD: password
+          DB_NAME: barberia_test
+          DB_PORT: 5432
+        run: |
+          npm start &
+          sleep 3
+
+      - name: Ejecutar colección de Postman con Newman
+        run: |
+          npx newman run "postman/My Collection.postman_collection.json" --env-var "base_url=http://localhost:3000"
