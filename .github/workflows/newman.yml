@@ -77,21 +77,53 @@ jobs:
           cat backend/server.log 2>/dev/null || true
           exit 1
 
+      # `set -o pipefail` es imprescindible: sin él, el `tee` se queda con el exit
+      # code 0 y una suite fallida se reportaría como verde.
       - name: Ejecutar la colección con Newman
         run: |
+          set -o pipefail
           npx --yes newman run "postman/My Collection.postman_collection.json" \
+            --env-var "base_url=http://localhost:3000" \
+            --reporters cli \
+            --color off 2>&1 | tee newman-report.txt
+
+      # El informe HTML es un extra, no la garantía. newman-reporter-html solo
+      # declara peer de newman@4 y el proyecto usa newman@6, así que se instala con
+      # --legacy-peer-deps. Si algún día deja de funcionar, el paso falla pero la
+      # suite ya se ejecutó y su salida quedó en newman-report.txt.
+      - name: Generar informe HTML (opcional)
+        continue-on-error: true
+        run: |
+          npx --yes \
+            --package newman@6.2.2 \
+            --package newman-reporter-html \
+            --legacy-peer-deps \
+            newman run "postman/My Collection.postman_collection.json" \
             --env-var "base_url=http://localhost:3000" \
             --reporters cli,html \
             --reporter-html-export newman-report.html \
-            --color off
+            --color off > /dev/null 2>&1
+          if [ -f newman-report.html ]; then
+            echo "Informe HTML generado ($(wc -c < newman-report.html) bytes)"
+          else
+            echo "::warning::No se pudo generar el informe HTML; se sube el log de texto"
+          fi
 
-      # Se sube el informe aunque Newman falle, para poder abrirlo desde la
-      # pestaña Summary del run.
-      - name: Publicar informe
+      # `error` en vez de `ignore`: antes, si el informe no se generaba el paso
+      # pasaba en verde sin hacer nada, y el run parecía correcto sin artefacto.
+      - name: Publicar el log de la suite
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: newman-report
+          path: newman-report.txt
+          if-no-files-found: error
+
+      - name: Publicar el informe HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-report-html
           path: newman-report.html
           if-no-files-found: ignore
 

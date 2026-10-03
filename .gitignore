@@ -3,5 +3,7 @@ node_modules/
 
 # Salidas de Newman
 newman-report.html
+newman-report.txt
 backend/newman-report.html
+backend/newman-report.txt
 backend/server.log
