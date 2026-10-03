@@ -49,7 +49,11 @@ const obtenerUsuarioPorId = async (req, res) => {
 
 // 3. Crear un nuevo usuario
 const crearUsuario = async (req, res) => {
-  const { nombre, apellido, correo, telefono, rol, clave } = req.body;
+  const { nombre, apellido, correo, telefono, rol } = req.body || {};
+  // `clave` es el nombre histórico de esta columna, pero /api/auth/login recibe la
+  // misma cosa como `password`. Aceptar ambos evita que un cliente que use
+  // `password` (como es lo natural en un login) reciba un 400 confuso.
+  const clave = req.body?.clave || req.body?.password;
 
   if (!nombre || !apellido || !correo || !telefono || !clave) {
     return res.status(400).json({
@@ -91,7 +95,9 @@ const crearUsuario = async (req, res) => {
 const actualizarUsuario = async (req, res) => {
   const { id } = req.params;
   const usuarioId = Number(id);
-  const { nombre, apellido, correo, telefono, rol, clave } = req.body;
+  const { nombre, apellido, correo, telefono, rol } = req.body || {};
+  // Mismo alias que en crearUsuario: `clave` o `password` funcionan igual
+  const clave = req.body?.clave || req.body?.password;
 
   if (!Number.isInteger(usuarioId) || usuarioId <= 0) {
     return res.status(400).json({

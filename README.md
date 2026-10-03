@@ -134,22 +134,47 @@ Todas las respuestas de la API utilizan un formato JSON estandarizado: `{ "ok": 
 
 Todas las rutas protegidas esperan el token en el header `Authorization: Bearer <token>`.
 
+> **Ojo con el nombre del campo de la contraseña.** En `POST /api/usuarios` el campo
+> histórico es `clave`, aunque **`password` también funciona** (se acepta cualquiera de
+> los dos). En `POST /api/auth/login` el campo es `password`. Ningún otro endpoint recibe
+> contraseña. Todos los campos marcados como obligatorios en la tabla siguiente deben
+> enviarse o la respuesta es `400`.
+
 ```bash
-# 1. Crear un usuario (o usar uno existente)
+# 1. Crear un usuario (o usar uno existente).
+#    Obligatorios: nombre, apellido, correo, telefono, clave (o password)
 curl -X POST http://localhost:3000/api/usuarios \
   -H "Content-Type: application/json" \
-  -d '{"nombre":"Admin","correo":"admin@barberia.com","password":"secreto123","rol":"administrador"}'
+  -d '{"nombre":"Admin","apellido":"Principal","correo":"admin@barberia.com","telefono":"3000000000","clave":"secreto123","rol":"administrador"}'
 
 # 2. Login → retorna JWT
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"correo":"admin@barberia.com","password":"secreto123"}'
-# Respuesta: { "ok": true, "token": "eyJhbGciOi..." }
 
-# 3. Usar el token en rutas protegidas
+# Respuesta:
+# {
+#   "ok": true,
+#   "token": "eyJhbGciOi...",
+#   "expiresIn": "8h",
+#   "usuario": { "usuarioID": 1, "nombre": "Admin", "apellido": "Principal",
+#                "correo": "admin@barberia.com", "rol": "administrador" }
+# }
+
+# 3. Averiguar quién está autenticado (imprescindible al recargar la página)
+curl http://localhost:3000/api/auth/me -H "Authorization: Bearer eyJhbGciOi..."
+
+# 4. Usar el token en rutas protegidas
 curl http://localhost:3000/api/citas \
   -H "Authorization: Bearer eyJhbGciOi..."
 ```
+
+**Sobre la sesión:** el token dura 8 horas (`expiresIn`). No hay endpoint de refresh ni
+de logout, así que el frontend debe:
+
+- guardarlo (localStorage o similar) y adjuntarlo en cada petición protegida;
+- limpiarlo al expirar o ante un `401`, y volver a pedir credenciales;
+- usar `GET /api/auth/me` al arrancar para saber si la sesión sigue viva.
 
 ### Crear el primer administrador
 
@@ -158,7 +183,7 @@ El sistema requiere al menos un usuario con rol `administrador` para gestionar c
 ```bash
 curl -X POST http://localhost:3000/api/usuarios \
   -H "Content-Type: application/json" \
-  -d '{"nombre":"Admin Principal","correo":"admin@barberia.com","password":"cambia-esto","rol":"administrador"}'
+  -d '{"nombre":"Admin","apellido":"Principal","correo":"admin@barberia.com","telefono":"3000000000","clave":"cambia-esto","rol":"administrador"}'
 ```
 
 Luego inicia sesión con ese usuario para obtener el token de administrador.

@@ -53,7 +53,15 @@
       "request": {
         "method": "GET",
         "header": [],
-        "url": { "raw": "{{base_url}}/", "host": ["{{base_url}}"], "path": [""] }
+        "url": {
+          "raw": "{{base_url}}/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            ""
+          ]
+        }
       },
       "event": [
         {
@@ -76,12 +84,26 @@
       "name": "02 · Crear usuario administrador",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"nombre\": \"Admin\",\n  \"apellido\": \"Prueba\",\n  \"correo\": \"admin_{{$timestamp}}{{$randomInt}}@barberia.com\",\n  \"telefono\": \"04121234567\",\n  \"clave\": \"clave123\",\n  \"rol\": \"administrador\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/usuarios", "host": ["{{base_url}}"], "path": ["api", "usuarios"] }
+        "url": {
+          "raw": "{{base_url}}/api/usuarios",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "usuarios"
+          ]
+        }
       },
       "event": [
         {
@@ -111,12 +133,26 @@
       "name": "03 · Crear usuario cliente",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"nombre\": \"Cliente\",\n  \"apellido\": \"Prueba\",\n  \"correo\": \"cliente_{{$timestamp}}{{$randomInt}}@barberia.com\",\n  \"telefono\": \"04129876543\",\n  \"clave\": \"clave123\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/usuarios", "host": ["{{base_url}}"], "path": ["api", "usuarios"] }
+        "url": {
+          "raw": "{{base_url}}/api/usuarios",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "usuarios"
+          ]
+        }
       },
       "event": [
         {
@@ -140,12 +176,26 @@
       "name": "04 · Correo duplicado rechazado",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"nombre\": \"Duplicado\",\n  \"apellido\": \"Prueba\",\n  \"correo\": \"{{adminCorreo}}\",\n  \"telefono\": \"04120000000\",\n  \"clave\": \"otra\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/usuarios", "host": ["{{base_url}}"], "path": ["api", "usuarios"] }
+        "url": {
+          "raw": "{{base_url}}/api/usuarios",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "usuarios"
+          ]
+        }
       },
       "event": [
         {
@@ -168,12 +218,27 @@
       "name": "05 · Login administrador",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"correo\": \"{{adminCorreo}}\",\n  \"password\": \"clave123\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] }
+        "url": {
+          "raw": "{{base_url}}/api/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
       },
       "event": [
         {
@@ -200,12 +265,27 @@
       "name": "06 · Login con clave incorrecta",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"correo\": \"{{adminCorreo}}\",\n  \"password\": \"claveIncorrecta\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] }
+        "url": {
+          "raw": "{{base_url}}/api/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
       },
       "event": [
         {
@@ -226,12 +306,27 @@
       "name": "07 · Login cliente",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"correo\": \"{{clienteCorreo}}\",\n  \"password\": \"clave123\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] }
+        "url": {
+          "raw": "{{base_url}}/api/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
       },
       "event": [
         {
@@ -247,16 +342,113 @@
       ]
     },
     {
+      "name": "07b · Perfil con GET /auth/me",
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/auth/me",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "me"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('devuelve 200', () => { pm.response.to.have.status(200); });",
+              "const u = pm.response.json().usuario;",
+              "pm.test('coincide con el usuario del login', () => {",
+              "  pm.expect(u.correo).to.eql(pm.environment.get('adminCorreo'));",
+              "  pm.expect(u.rol).to.eql('administrador');",
+              "});",
+              "pm.test('no expone la clave', () => { pm.expect(u).to.not.have.property('clave'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07c · Perfil sin token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/auth/me",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "me"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('sin token devuelve 401', () => { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "08 · Crear servicio",
       "request": {
         "method": "POST",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"nombre\": \"Corte Clásico\",\n  \"descripcion\": \"Corte de cabello tradicional\",\n  \"precio\": 15,\n  \"duracion_minutos\": 30\n}"
         },
-        "url": { "raw": "{{base_url}}/api/servicios", "host": ["{{base_url}}"], "path": ["api", "servicios"] }
+        "url": {
+          "raw": "{{base_url}}/api/servicios",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "servicios"
+          ]
+        }
       },
       "event": [
         {
@@ -279,13 +471,36 @@
       "name": "09 · Crear barbero",
       "request": {
         "method": "POST",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"usuarioID\": {{usuarioAdminID}},\n  \"comision\": 20.0\n}"
         },
-        "url": { "raw": "{{base_url}}/api/barberos", "host": ["{{base_url}}"], "path": ["api", "barberos"] }
+        "url": {
+          "raw": "{{base_url}}/api/barberos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "barberos"
+          ]
+        }
       },
       "event": [
         {
@@ -308,13 +523,36 @@
       "name": "10 · Barbero duplicado rechazado",
       "request": {
         "method": "POST",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"usuarioID\": {{usuarioAdminID}},\n  \"comision\": 30.0\n}"
         },
-        "url": { "raw": "{{base_url}}/api/barberos", "host": ["{{base_url}}"], "path": ["api", "barberos"] }
+        "url": {
+          "raw": "{{base_url}}/api/barberos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "barberos"
+          ]
+        }
       },
       "event": [
         {
@@ -334,13 +572,36 @@
       "name": "11 · Crear horario laboral",
       "request": {
         "method": "POST",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"barberoID\": {{barberoID}},\n  \"dia_semana\": \"{{diaCita}}\",\n  \"hora_inicio\": \"09:00\",\n  \"hora_fin\": \"17:00\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/horarios", "host": ["{{base_url}}"], "path": ["api", "horarios"] }
+        "url": {
+          "raw": "{{base_url}}/api/horarios",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "horarios"
+          ]
+        }
       },
       "event": [
         {
@@ -362,13 +623,36 @@
       "name": "12 · Horario inválido rechazado",
       "request": {
         "method": "POST",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"barberoID\": {{barberoID}},\n  \"dia_semana\": \"lunex\",\n  \"hora_inicio\": \"09:00\",\n  \"hora_fin\": \"17:00\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/horarios", "host": ["{{base_url}}"], "path": ["api", "horarios"] }
+        "url": {
+          "raw": "{{base_url}}/api/horarios",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "horarios"
+          ]
+        }
       },
       "event": [
         {
@@ -386,13 +670,36 @@
       "name": "13 · Asignar servicio al barbero",
       "request": {
         "method": "POST",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}}\n}"
         },
-        "url": { "raw": "{{base_url}}/api/barbero-servicios", "host": ["{{base_url}}"], "path": ["api", "barbero-servicios"] }
+        "url": {
+          "raw": "{{base_url}}/api/barbero-servicios",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "barbero-servicios"
+          ]
+        }
       },
       "event": [
         {
@@ -413,8 +720,15 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/api/barbero-servicios/barbero/{{barberoID}}",
-          "host": ["{{base_url}}"],
-          "path": ["api", "barbero-servicios", "barbero", "{{barberoID}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "barbero-servicios",
+            "barbero",
+            "{{barberoID}}"
+          ]
         }
       },
       "event": [
@@ -441,8 +755,15 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/api/horarios/barbero/{{barberoID}}",
-          "host": ["{{base_url}}"],
-          "path": ["api", "horarios", "barbero", "{{barberoID}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "horarios",
+            "barbero",
+            "{{barberoID}}"
+          ]
         }
       },
       "event": [
@@ -464,13 +785,36 @@
       "name": "16 · Crear cita dentro del horario",
       "request": {
         "method": "POST",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"clienteID\": {{usuarioClienteID}},\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}},\n  \"fecha_hora\": \"{{fechaCita}}\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/citas", "host": ["{{base_url}}"], "path": ["api", "citas"] }
+        "url": {
+          "raw": "{{base_url}}/api/citas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "citas"
+          ]
+        }
       },
       "event": [
         {
@@ -498,13 +842,36 @@
       "name": "17 · Cita solapada rechazada",
       "request": {
         "method": "POST",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"clienteID\": {{usuarioClienteID}},\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}},\n  \"fecha_hora\": \"{{fechaSolapada}}\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/citas", "host": ["{{base_url}}"], "path": ["api", "citas"] }
+        "url": {
+          "raw": "{{base_url}}/api/citas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "citas"
+          ]
+        }
       },
       "event": [
         {
@@ -525,13 +892,36 @@
       "name": "18 · Cita fuera del horario rechazada",
       "request": {
         "method": "POST",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"clienteID\": {{usuarioClienteID}},\n  \"barberoID\": {{barberoID}},\n  \"servicioID\": {{servicioID}},\n  \"fecha_hora\": \"{{fechaFueraHorario}}\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/citas", "host": ["{{base_url}}"], "path": ["api", "citas"] }
+        "url": {
+          "raw": "{{base_url}}/api/citas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "citas"
+          ]
+        }
       },
       "event": [
         {
@@ -552,9 +942,27 @@
       "name": "19 · Listar citas",
       "request": {
         "method": "GET",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
         "header": [],
-        "url": { "raw": "{{base_url}}/api/citas", "host": ["{{base_url}}"], "path": ["api", "citas"] }
+        "url": {
+          "raw": "{{base_url}}/api/citas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "citas"
+          ]
+        }
       },
       "event": [
         {
@@ -580,7 +988,16 @@
       "request": {
         "method": "GET",
         "header": [],
-        "url": { "raw": "{{base_url}}/api/citas", "host": ["{{base_url}}"], "path": ["api", "citas"] }
+        "url": {
+          "raw": "{{base_url}}/api/citas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "citas"
+          ]
+        }
       },
       "event": [
         {
@@ -598,16 +1015,37 @@
       "name": "21 · Cambiar estado de cita",
       "request": {
         "method": "PUT",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"estado\": \"confirmada\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/citas/{{citaID}}/estado",
-          "host": ["{{base_url}}"],
-          "path": ["api", "citas", "{{citaID}}", "estado"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "citas",
+            "{{citaID}}",
+            "estado"
+          ]
         }
       },
       "event": [
@@ -629,16 +1067,37 @@
       "name": "22 · Estado de cita inválido",
       "request": {
         "method": "PUT",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"estado\": \"inventado\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/citas/{{citaID}}/estado",
-          "host": ["{{base_url}}"],
-          "path": ["api", "citas", "{{citaID}}", "estado"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "citas",
+            "{{citaID}}",
+            "estado"
+          ]
         }
       },
       "event": [
@@ -657,16 +1116,37 @@
       "name": "23 · Rol insuficiente para cambiar estado",
       "request": {
         "method": "PUT",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenCliente}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenCliente}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"estado\": \"completada\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/citas/{{citaID}}/estado",
-          "host": ["{{base_url}}"],
-          "path": ["api", "citas", "{{citaID}}", "estado"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "citas",
+            "{{citaID}}",
+            "estado"
+          ]
         }
       },
       "event": [
@@ -687,9 +1167,27 @@
       "name": "24 · Transacciones exige rol administrador",
       "request": {
         "method": "GET",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenCliente}}", "type": "string" }] },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenCliente}}",
+              "type": "string"
+            }
+          ]
+        },
         "header": [],
-        "url": { "raw": "{{base_url}}/api/transacciones", "host": ["{{base_url}}"], "path": ["api", "transacciones"] }
+        "url": {
+          "raw": "{{base_url}}/api/transacciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "transacciones"
+          ]
+        }
       },
       "event": [
         {
@@ -709,13 +1207,36 @@
       "name": "25 · Registrar movimiento de saldo",
       "request": {
         "method": "POST",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"usuarioID\": {{usuarioAdminID}},\n  \"tipo_movimiento\": \"recarga\",\n  \"monto\": 100,\n  \"saldo_restante\": 100,\n  \"referencia_pago\": \"PAG-E2E-001\"\n}"
         },
-        "url": { "raw": "{{base_url}}/api/transacciones", "host": ["{{base_url}}"], "path": ["api", "transacciones"] }
+        "url": {
+          "raw": "{{base_url}}/api/transacciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "transacciones"
+          ]
+        }
       },
       "event": [
         {
@@ -736,13 +1257,36 @@
       "name": "26 · Movimiento sin referencia rechazado",
       "request": {
         "method": "POST",
-        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"usuarioID\": {{usuarioAdminID}},\n  \"tipo_movimiento\": \"recarga\",\n  \"monto\": 50,\n  \"saldo_restante\": 150\n}"
         },
-        "url": { "raw": "{{base_url}}/api/transacciones", "host": ["{{base_url}}"], "path": ["api", "transacciones"] }
+        "url": {
+          "raw": "{{base_url}}/api/transacciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "transacciones"
+          ]
+        }
       },
       "event": [
         {
@@ -765,8 +1309,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/api/usuarios/abc",
-          "host": ["{{base_url}}"],
-          "path": ["api", "usuarios", "abc"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "usuarios",
+            "abc"
+          ]
         }
       },
       "event": [
@@ -788,7 +1338,16 @@
       "request": {
         "method": "GET",
         "header": [],
-        "url": { "raw": "{{base_url}}/api/no-existe", "host": ["{{base_url}}"], "path": ["api", "no-existe"] }
+        "url": {
+          "raw": "{{base_url}}/api/no-existe",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "no-existe"
+          ]
+        }
       },
       "event": [
         {
