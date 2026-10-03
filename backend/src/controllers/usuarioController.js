@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const db = require('../config/db');
 
 // 1. Obtener todos los usuarios
@@ -58,12 +59,15 @@ const crearUsuario = async (req, res) => {
   }
 
   try {
+    // La clave se almacena como hash bcrypt, nunca en texto plano. El RETURNING no
+    // incluye `clave`, así que la respuesta nunca la expone.
+    const claveHasheada = await bcrypt.hash(clave, 10);
     const query = `
       INSERT INTO usuario (nombre, apellido, correo, telefono, rol, clave)
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING "usuarioID", nombre, apellido, correo, telefono, rol;
     `;
-    const valores = [nombre, apellido, correo, telefono, rol || 'cliente', clave];
+    const valores = [nombre, apellido, correo, telefono, rol || 'cliente', claveHasheada];
 
     const resultado = await db.query(query, valores);
 
@@ -97,6 +101,9 @@ const actualizarUsuario = async (req, res) => {
   }
 
   try {
+    // Solo se hashea si viene una clave nueva. Si el body no trae `clave`, se pasa
+    // null y el COALESCE conserva el hash que ya tenía.
+    const claveHasheada = clave ? await bcrypt.hash(clave, 10) : null;
     const query = `
       UPDATE usuario
       SET nombre = COALESCE($1, nombre),
@@ -108,7 +115,7 @@ const actualizarUsuario = async (req, res) => {
       WHERE "usuarioID" = $7
       RETURNING "usuarioID", nombre, apellido, correo, telefono, rol;
     `;
-    const valores = [nombre, apellido, correo, telefono, rol, clave, usuarioId];
+    const valores = [nombre, apellido, correo, telefono, rol, claveHasheada, usuarioId];
     const resultado = await db.query(query, valores);
 
     if (resultado.rows.length === 0) {

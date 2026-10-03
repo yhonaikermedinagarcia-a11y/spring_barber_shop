@@ -29,9 +29,10 @@ const login = async (req, res) => {
 
     const usuario = resultado.rows[0];
 
-    // Verificar la contraseña. El registro guarda la clave tal cual se envía, así que
-    // se compara en texto plano. Las cuentas que quedaron con un hash bcrypt de una
-    // versión anterior con hasheo se siguen aceptando para no bloquear esos accesos.
+    // Verificar la contraseña. usuarioController guarda un hash bcrypt, así que lo
+    // normal es comparar contra el hash. Las cuentas creadas antes de que existiera
+    // el hasheo siguen con la clave en texto plano: se aceptan para no bloquear esos
+    // accesos y quedan migradas cuando su dueño cambia la clave por PUT.
     const esHashBcrypt = /^\$2[aby]\$\d{2}\$/.test(usuario.clave);
     const passwordValida = esHashBcrypt
       ? await bcrypt.compare(password, usuario.clave)
