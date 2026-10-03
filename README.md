@@ -13,56 +13,128 @@ El sistema está construido bajo el patrón de diseño **MVC** (Modelo-Vista-Con
 
 ## 📋 Prerrequisitos
 
-*   [Node.js](https://nodejs.org/) (v16 o superior)
-*   [PostgreSQL](https://www.postgresql.org/) (v13 o superior)
+*   [Node.js](https://nodejs.org/) **v18 o superior** — Express 5 lo exige; con Node 16 el proyecto no arranca
+*   [PostgreSQL](https://www.postgresql.org/) v13 o superior
 *   Git
 
 ## 🔧 Instalación y Configuración
 
-1. **Clonar el repositorio**
-   ```bash
-   git clone https://github.com/tu-usuario/spring_barber_shop.git
-   cd spring_barber_shop/backend
-   ```
+### 1. Clonar el repositorio
 
-2. **Instalar dependencias**
-   ```bash
-   npm install
-   ```
+```bash
+git clone https://github.com/yhonaikermedinagarcia-a11y/spring_barber_shop.git
+cd spring_barber_shop/backend
+```
 
-3. **Configurar variables de entorno**
-   ```bash
-   cp .env.example .env
-   # editar .env con las credenciales de PostgreSQL
-   ```
+### 2. Instalar dependencias
 
-   Variables esperadas en `.env`:
+```bash
+npm install
+```
 
-   | Variable | Descripción |
-   |---|---|
-   | `DB_HOST` | Host de PostgreSQL (ej. `localhost`) |
-   | `DB_PORT` | Puerto (ej. `5432`) |
-   | `DB_NAME` | Nombre de la base de datos |
-   | `DB_USER` | Usuario de PostgreSQL |
-   | `DB_PASSWORD` | Contraseña de PostgreSQL |
-   | `JWT_SECRET` | Secreto para firmar tokens JWT |
-   | `PORT` | Puerto del servidor (ej. `3000`) |
+### 3. Configurar las variables de entorno
 
-4. **Crear la base de datos y aplicar migraciones**
-   ```bash
-   # Conéctate a PostgreSQL y crea la base (si no existe)
-   psql -U postgres -c "CREATE DATABASE spring_barber_shop;"
+```bash
+cp .env.example .env
+```
 
-   # Aplica las migraciones desde el directorio backend/
-   npm run migrate
-   ```
+`.env.example` trae `cambiar_esto` como valor de la contraseña y del secreto JWT.
+**No sirve tal cual**: hay que editar dos líneas antes de seguir.
 
-5. **Iniciar el servidor**
-   ```bash
-   npm start
-   ```
+```bash
+# En .env sustituye:
+#   DB_PASSWORD=cambiar_esto   ->  la contraseña real de tu usuario de PostgreSQL
+#   JWT_SECRET=cambiar_esto   ->  una cadena larga y aleatoria
+# Genera una con: openssl rand -hex 32
+```
 
-La API queda disponible en `http://localhost:3000`.
+| Variable | Por defecto | Descripción |
+|---|---|---|
+| `DB_HOST` | `localhost` | Host de PostgreSQL |
+| `DB_PORT` | `5432` | Puerto de PostgreSQL |
+| `DB_NAME` | `barberia` | Nombre de la base de datos |
+| `DB_USER` | `postgres` | Usuario de PostgreSQL |
+| `DB_PASSWORD` | — | Contraseña (**obligatoria**) |
+| `JWT_SECRET` | — | Secreto para firmar los tokens (**obligatorio**) |
+| `PORT` | `3000` | Puerto donde escucha la API |
+
+El nombre de la base debe ser **el mismo** en `.env` y en el paso 4. Si cambias
+`DB_NAME`, cambia también el `CREATE DATABASE`.
+
+### 4. Crear la base de datos
+
+```bash
+# El nombre debe coincidir con DB_NAME de tu .env
+psql -U postgres -c "CREATE DATABASE barberia;"
+```
+
+Si ya existe, PostgreSQL avisa y no pasa nada. En Windows, `psql` suele estar en
+`C:\Program Files\PostgreSQL\<versión>\bin` y quizá no esté en el PATH.
+
+### 5. Aplicar las migraciones
+
+```bash
+npm run migrate
+```
+
+Crea el esquema completo. **Paso obligatorio**: sin él el servidor arranca pero todas
+las peticiones devuelven `500` con `relation does not exist`.
+
+```
+Aplicando 7 de 7 migraciones:
+  000_esquema_base.sql ... ok
+  ...
+  006_modulo_transacciones.sql ... ok
+7 migración(es) aplicada(s).
+```
+
+Para consultar el estado: `npm run migrate:status`.
+
+### 6. Arrancar el servidor
+
+```bash
+npm start
+```
+
+Si todo está correcto:
+
+```
+✅ Conexión exitosa a PostgreSQL (Base de datos: barberia)
+🚀 Servidor corriendo en http://localhost:3000
+```
+
+### 7. Comprobar que funciona
+
+```bash
+curl http://localhost:3000/
+```
+
+O abre `postman/My Collection.postman_collection.json` en Postman y pulsa **Run**.
+Si los 30 pasos y 53 aserciones quedan en verde, el backend está correcto.
+
+## ⚠️ Si algo falla
+
+El servidor **no arranca** si no puede conectarse a PostgreSQL, y el error indica qué
+variable revisar:
+
+```
+❌ No se pudo conectar con PostgreSQL
+   password authentication failed for user "postgres"
+
+   Revisa backend/.env:
+     DB_HOST=localhost
+     DB_PORT=5432
+     DB_NAME=barberia
+     DB_USER=postgres
+```
+
+| Síntoma | Causa habitual |
+|---|---|
+| `password authentication failed` | `DB_PASSWORD` incorrecta |
+| `database "X" does not exist` | Falta crear la base (paso 4), o `DB_NAME` no coincide |
+| `ECONNREFUSED` | PostgreSQL no está corriendo |
+| `Falta la variable de entorno JWT_SECRET` | No se editó `JWT_SECRET` en el paso 3 |
+| Todo devuelve `500` con `relation does not exist` | Saltó el paso 5, `npm run migrate` |
 
 ## 🗄️ Esquema de Base de Datos
 
