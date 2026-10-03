@@ -201,9 +201,27 @@ Errores comunes:
 | `401` | No autenticado (token ausente o inválido) |
 | `403` | Prohibido (rol insuficiente) |
 | `404` | Ruta o recurso inexistente |
+| `429` | Demasiados intentos de acceso a `/api/auth/login` |
 | `500` | Error interno del servidor |
 
 > **Nota:** Las rutas no encontradas están manejadas globalmente y retornan un error 404 Not Found en formato JSON.
+
+### Limitación de intentos de acceso
+
+`POST /api/auth/login` acepta **10 intentos fallidos por IP cada 15 minutos**; a partir
+del siguiente responde `429`. Solo se cuentan los fallos: un login correcto no suma y
+además reinicia el contador, de modo que quien se equivoca unas veces y luego entra
+bien no arrastra el presupuesto. La respuesta incluye las cabeceras `RateLimit` y
+`Retry-After`.
+
+Dos cosas que conviene tener presentes al desplegar:
+
+- **Si hay un proxy o balanceador delante**, hay que configurar `trust proxy` en
+  `app.js`. Sin eso todas las peticiones parecen venir de la misma IP y el límite se
+  agota de golpe para todos los usuarios.
+- **Con varias réplicas**, el contador vive en la memoria de cada proceso, así que el
+  límite real se multiplica por el número de servidores. La solución es un almacén
+  compartido (Redis).
 
 ## Pruebas E2E
 
