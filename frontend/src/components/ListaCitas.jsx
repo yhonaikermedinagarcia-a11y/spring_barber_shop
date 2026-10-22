@@ -106,7 +106,8 @@ export function AccionesClienteCita({ cita, onCambio, setError }) {
 //       reprograma) | 'barbero' (solo lectura: el barbero únicamente consulta su
 //       agenda, sin los datos personales del cliente ni los del pago)
 //
-// `onEliminar` es opcional: si se pasa, la lista ofrece borrar la cita. Solo
+//
+// Solo el administrador puede borrar citas (con onEliminar).// `onEliminar` es opcional: si se pasa, la lista ofrece borrar la cita. Solo
 // el panel de administración lo usa, porque es el único sitio desde donde se
 // puede borrar una cita.
 export default function ListaCitas({ citas, modo = 'cliente', onCambio, onEliminar }) {
@@ -215,6 +216,8 @@ export default function ListaCitas({ citas, modo = 'cliente', onCambio, onElimin
 
   // El barbero no ve el teléfono del cliente ni cómo va el pago.
   const vistaBarbero = modo === 'barbero'
+  // El barbero solo debe estar al tanto de la cita: sin acciones.
+  const esSoloLecturaBarbero = vistaBarbero
 
   return (
     <div className="space-y-4">
@@ -249,10 +252,10 @@ export default function ListaCitas({ citas, modo = 'cliente', onCambio, onElimin
 
             // Solo el administrador aprueba o rechaza el reembolso de una
             // cancelación solicitada.
-            const esSolicitudAdmin = modo === 'equipo' && cita.estado === 'cancelacion_solicitada'
+            const esSolicitudAdmin = modo === 'equipo' && !esSoloLecturaBarbero && cita.estado === 'cancelacion_solicitada'
 
             // Borrar la cita: solo el panel de administración lo ofrece.
-            const puedeEliminar = modo === 'equipo' && Boolean(onEliminar)
+            const puedeEliminar = modo === 'equipo' && !esSoloLecturaBarbero && Boolean(onEliminar)
 
             return (
               <article
@@ -340,7 +343,7 @@ export default function ListaCitas({ citas, modo = 'cliente', onCambio, onElimin
                   </p>
                 )}
 
-                {(acciones.length > 0 || modo === 'cliente' || puedeReprogramar || esSolicitudAdmin || puedeEliminar) && (
+                {(acciones.length > 0 || modo === 'cliente' || puedeReprogramar || esSolicitudAdmin || puedeEliminar) && !esSoloLecturaBarbero && (
                   <div className="flex flex-wrap gap-2 sm:ml-auto">
                     {esSolicitudAdmin && (
                       <>
