@@ -5,6 +5,7 @@ import { getCitas } from '../api/citas'
 import { mensajeDeError } from '../api/client'
 import AppHeader from '../components/AppHeader'
 import ListaCitas from '../components/ListaCitas'
+import MisEsperas from '../components/MisEsperas'
 
 export default function MisCitas() {
   const { usuario } = useAuth()
@@ -54,6 +55,8 @@ export default function MisCitas() {
             Nueva cita
           </Link>
         </div>
+
+        {usuario.rol === 'cliente' && <MisEsperas />}
 
         {cargando && <p className="text-cream-200/70">Cargando citas…</p>}
         {error && <p className="text-red-400">{error}</p>}

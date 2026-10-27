@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { errorInterno } = require('../utils/respuestaError');
 const { idValido } = require('../utils/validacion');
+const { horaSigueLibre } = require('../utils/agenda');
 const { rutaPublica } = require('../config/subidas');
 const {
   registrarPagoCita,
@@ -122,6 +123,15 @@ const crearTransaccion = async (req, res) => {
     return crearPago(req, res);
   }
 
+  // El libro de saldos es del administrador: un cliente podía apuntarse (o
+  // apuntarle a otro) una recarga con el saldo que quisiera.
+  if (req.usuario?.rol !== 'administrador') {
+    return res.status(403).json({
+      ok: false,
+      message: 'Solo el administrador puede registrar movimientos de saldo'
+    });
+  }
+
   return crearMovimientoSaldo(req, res);
 };
 
@@ -157,8 +167,33 @@ const crearPago = async (req, res) => {
     });
   }
 
-  // El comprobante llega como archivo (multipart) o como URL ya subida.
-  const comprobante = req.file ? rutaPublica(req.file.filename) : (req.body?.comprobante_url || null);
+  /*
+   * Lo que no es del administrador solo puede ser un pago móvil con su
+   * comprobante, y queda pendiente de revisión. Antes un cliente podía
+   * registrar un pago "en efectivo" de su propia cita, con el monto que
+   * quisiera (incluso 0), y la cita quedaba como pagada sin haber pagado.
+   */
+  if (!esAdmin && metodo !== 'pago_movil') {
+    return res.status(403).json({
+      ok: false,
+      message: 'Los pagos en efectivo o con tarjeta los registra el administrador en el local'
+    });
+  }
+
+  // El comprobante llega como archivo (multipart). Solo el administrador puede
+  // pasar una ruta ya subida, y tiene que ser de /uploads: una URL cualquiera
+  // acababa en un enlace del panel de pagos.
+  const urlComprobante = typeof req.body?.comprobante_url === 'string' ? req.body.comprobante_url.trim() : '';
+  const comprobante = req.file
+    ? rutaPublica(req.file.filename)
+    : (esAdmin && urlComprobante.startsWith('/uploads/') ? urlComprobante : null);
+
+  if (!esAdmin && !comprobante) {
+    return res.status(400).json({
+      ok: false,
+      message: 'El pago móvil necesita el comprobante: sube una imagen del pago'
+    });
+  }
   const referencia = typeof referencia_pago === 'string' ? referencia_pago.trim() : '';
 
   // El pago móvil sin referencia no se puede revisar después: sin el número
@@ -172,7 +207,11 @@ const crearPago = async (req, res) => {
 
   try {
     const cita = await db.query(
-      `SELECT c."citaID", c.estado, c."clienteID", s.precio
+      `SELECT c."citaID", c.estado, c."clienteID", c.pago_estado, s.precio,
+              EXISTS (
+                SELECT 1 FROM transacciones t
+                WHERE t."citaID" = c."citaID" AND t.estado = 'pendiente'
+              ) AS tiene_pendiente
        FROM cita c
        JOIN servicios s ON s."serviciosID" = c."servicioID"
        WHERE c."citaID" = $1`,
@@ -183,7 +222,7 @@ const crearPago = async (req, res) => {
       return res.status(404).json({ ok: false, message: 'Cita no encontrada' });
     }
 
-    const { precio, clienteID } = cita.rows[0];
+    const { precio, clienteID, pago_estado: pagoEstado, tiene_pendiente: tienePendiente, estado: estadoCita } = cita.rows[0];
 
     // Un cliente solo puede pagar sus propias citas. El administrador puede
     // pagar cualquiera (es el que cobra en el mostrador).
@@ -194,7 +233,23 @@ const crearPago = async (req, res) => {
       });
     }
 
-    const montoNumero = monto === undefined || monto === null || monto === '' ? Number(precio) : Number(monto);
+    // El cliente paga el precio del servicio; solo el administrador puede
+    // apuntar otro monto (un descuento en el local, por ejemplo).
+    // Una cita ya pagada, cancelada o con un comprobante en revisión no admite
+    // otro pago: se duplicaban los cobros en el libro y en los ingresos.
+    if (pagoEstado === 'completado') {
+      return res.status(400).json({ ok: false, message: 'El pago de esta cita ya está realizado' });
+    }
+    if (tienePendiente) {
+      return res.status(400).json({ ok: false, message: 'Esta cita ya tiene un pago pendiente de revisión' });
+    }
+    if (estadoCita === 'cancelada' && !esAdmin) {
+      return res.status(400).json({ ok: false, message: 'Esta cita está cancelada: no admite pagos' });
+    }
+
+    const montoNumero = !esAdmin || monto === undefined || monto === null || monto === ''
+      ? Number(precio)
+      : Number(monto);
 
     if (!Number.isFinite(montoNumero) || montoNumero < 0 || montoNumero > 99999999.99) {
       return res.status(400).json({
@@ -373,17 +428,42 @@ const aprobarTransaccion = async (req, res) => {
       const resultado = await client.query(
         `UPDATE transacciones
          SET estado = 'completado', motivo_rechazo = NULL
-         WHERE "transaccionID" = $1
+         WHERE "transaccionID" = $1 AND estado = 'pendiente'
          RETURNING "transaccionID", "citaID", metodo_pago, estado, monto, referencia_pago, comprobante_url, fecha_creacion;`,
         [transaccionId]
       );
 
-      if (resultado.rows.length === 0) return null;
+      if (resultado.rows.length === 0) {
+        // O no existe, o ya se revisó: un pago aprobado o rechazado no se
+        // vuelve a tocar (antes se podía rechazar un cobro ya hecho en el
+        // local y la cita pasaba a "denegada").
+        const existe = await client.query(
+          'SELECT estado FROM transacciones WHERE "transaccionID" = $1',
+          [transaccionId]
+        );
+        return existe.rows.length ? { yaRevisada: existe.rows[0].estado } : null;
+      }
 
       const transaccion = resultado.rows[0];
 
       // La cita (si la hay) queda confirmada y con el pago completado.
       if (transaccion.citaID) {
+        // Una cita denegada (por un comprobante rechazado antes) había dejado
+        // libre su hora. Si el cliente sube un comprobante nuevo y se aprueba,
+        // la cita vuelve a la agenda, pero solo si nadie tomó esa hora.
+        const { rows: [cita] } = await client.query(
+          'SELECT estado FROM cita WHERE "citaID" = $1',
+          [transaccion.citaID]
+        );
+        if (cita?.estado === 'denegada') {
+          if (!(await horaSigueLibre(client, transaccion.citaID))) {
+            const error = new Error('La hora de esta cita ya la tomó otra reserva: rechaza este pago y pide al cliente que reserve otra hora');
+            error.status = 409;
+            throw error;
+          }
+          await client.query(`UPDATE cita SET estado = 'pendiente' WHERE "citaID" = $1`, [transaccion.citaID]);
+        }
+
         await aprobarPagoCita(client, {
           citaId: transaccion.citaID,
           metodo: transaccion.metodo_pago,
@@ -397,6 +477,13 @@ const aprobarTransaccion = async (req, res) => {
       return res.status(404).json({ ok: false, message: 'Transacción no encontrada' });
     }
 
+    if (actualizada.yaRevisada) {
+      return res.status(400).json({
+        ok: false,
+        message: `Este pago ya está ${actualizada.yaRevisada}: solo se revisan los pagos pendientes`
+      });
+    }
+
     res.json({
       ok: true,
       message: 'Pago aprobado exitosamente',
@@ -406,6 +493,9 @@ const aprobarTransaccion = async (req, res) => {
       }
     });
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ ok: false, message: error.message });
+    }
     errorInterno(res, error, 'Aprobar Transaccion');
   }
 };
@@ -439,12 +529,21 @@ const rechazarTransaccion = async (req, res) => {
       const resultado = await client.query(
         `UPDATE transacciones
          SET estado = 'rechazado', motivo_rechazo = $2
-         WHERE "transaccionID" = $1
+         WHERE "transaccionID" = $1 AND estado = 'pendiente'
          RETURNING "transaccionID", "citaID", metodo_pago, estado, monto, referencia_pago, comprobante_url, motivo_rechazo, fecha_creacion;`,
         [transaccionId, motivoTexto]
       );
 
-      if (resultado.rows.length === 0) return null;
+      if (resultado.rows.length === 0) {
+        // O no existe, o ya se revisó: un pago aprobado o rechazado no se
+        // vuelve a tocar (antes se podía rechazar un cobro ya hecho en el
+        // local y la cita pasaba a "denegada").
+        const existe = await client.query(
+          'SELECT estado FROM transacciones WHERE "transaccionID" = $1',
+          [transaccionId]
+        );
+        return existe.rows.length ? { yaRevisada: existe.rows[0].estado } : null;
+      }
 
       const transaccion = resultado.rows[0];
 
@@ -460,6 +559,13 @@ const rechazarTransaccion = async (req, res) => {
 
     if (!actualizada) {
       return res.status(404).json({ ok: false, message: 'Transacción no encontrada' });
+    }
+
+    if (actualizada.yaRevisada) {
+      return res.status(400).json({
+        ok: false,
+        message: `Este pago ya está ${actualizada.yaRevisada}: solo se revisan los pagos pendientes`
+      });
     }
 
     res.json({

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AppHeader from '../../components/AppHeader'
 import AdminResumen from './AdminResumen'
 import AdminCitas from './AdminCitas'
@@ -10,6 +10,8 @@ import AdminHorarios from './AdminHorarios'
 import AdminTransacciones from './AdminTransacciones'
 import AdminResenas from './AdminResenas'
 import AdminFeriados from './AdminFeriados'
+import AdminPermisos from './AdminPermisos'
+import AdminListaEspera from './AdminListaEspera'
 
 const pestanas = [
   'Resumen',
@@ -19,13 +21,19 @@ const pestanas = [
   'Servicios',
   'Barberos',
   'Horarios',
+  'Permisos',
+  'Lista de espera',
   'Reseñas',
   'Pagos',
   'Días no laborables',
 ]
 
 export default function PanelAdmin() {
-  const [pestana, setPestana] = useState('Resumen')
+  // La pestaña va en la URL: al recargar (F5) se vuelve a la misma pestaña y
+  // sus datos se piden de nuevo a la API.
+  const [params, setParams] = useSearchParams()
+  const pestana = pestanas.includes(params.get('pestana')) ? params.get('pestana') : 'Resumen'
+  const setPestana = (p) => setParams(p === 'Resumen' ? {} : { pestana: p }, { replace: true })
 
   return (
     <div className="min-h-screen bg-ink-950">
@@ -60,6 +68,8 @@ export default function PanelAdmin() {
           {pestana === 'Servicios' && <AdminServicios />}
           {pestana === 'Barberos' && <AdminBarberos />}
           {pestana === 'Horarios' && <AdminHorarios />}
+          {pestana === 'Permisos' && <AdminPermisos />}
+          {pestana === 'Lista de espera' && <AdminListaEspera />}
           {pestana === 'Reseñas' && <AdminResenas />}
           {pestana === 'Pagos' && <AdminTransacciones />}
           {pestana === 'Días no laborables' && <AdminFeriados />}

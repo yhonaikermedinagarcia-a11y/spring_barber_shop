@@ -1,18 +1,32 @@
-# Configuración de despliegue en Vercel (web).
-#
-# Vercel detecta el proyecto Vite por sí solo: el Root Directory del proyecto
-# debe ser `frontend` y el build command `npm run build`.
-#
-# La reescritura es lo que hace que la SPA funcione con react-router: cualquier
-# ruta que no exista en el disco se sirve con index.html. Los archivos de
-# `dist/assets/` tienen hash en el nombre, así que se sirven directamente sin
-# pasar por la reescritura.
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/|assets/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
   ]
 }

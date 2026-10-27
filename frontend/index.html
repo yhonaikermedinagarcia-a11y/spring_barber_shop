@@ -28,6 +28,17 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Pareja de public/404.html: si el hosting devolvió 404 al recargar una
+      // ruta de la web, aquí se recupera esa ruta antes de que arranque React.
+      try {
+        var ruta = sessionStorage.getItem('spa:ruta')
+        if (ruta) {
+          sessionStorage.removeItem('spa:ruta')
+          if (ruta !== '/') history.replaceState(null, '', ruta)
+        }
+      } catch (e) {}
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

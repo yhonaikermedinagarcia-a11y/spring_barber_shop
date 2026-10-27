@@ -4,6 +4,7 @@ const { errorInterno } = require('../utils/respuestaError');
 const { nombreDia, horaAMinutos, fechaYmd, parsearFechaHora, idValido } = require('../utils/validacion');
 const { esDiaDeDescanso, mensajeDiaDeDescanso } = require('../config/calendario');
 const { rutaPublica } = require('../config/subidas');
+const { hayCruce, horaSigueLibre } = require('../utils/agenda');
 const {
   leerMetodoPago,
   registrarPagoCita,
@@ -184,6 +185,18 @@ const obtenerOcupados = async (req, res) => {
     });
   }
 
+  // Las fechas tienen que venir como YYYY-MM-DD: con cualquier otro texto,
+  // PostgreSQL fallaba al convertirlas y la respuesta era un 500.
+  const esFecha = (valor) => typeof valor === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(valor);
+  for (const campo of ['desde', 'hasta']) {
+    if (req.query[campo] !== undefined && !esFecha(req.query[campo])) {
+      return res.status(400).json({
+        ok: false,
+        message: `${campo} debe ser una fecha con el formato AAAA-MM-DD`
+      });
+    }
+  }
+
   const params = [barberoId];
   const filtros = ['c."barberoID" = $1'];
 
@@ -249,7 +262,16 @@ const validarCita = async (client, {
   servicioId,
   fechaInicio,
   excluirCitaId = null,
+  permitirPasado = false,
 }) => {
+  // 0. No se reserva en el pasado. Antes se aceptaba cualquier fecha (incluso
+  //    2020), y esas citas inflaban la agenda y las estadísticas. El
+  //    administrador sí puede apuntar una cita ya pasada (un cliente que llegó
+  //    sin reserva y ya fue atendido).
+  if (!permitirPasado && fechaInicio.getTime() < Date.now()) {
+    throw errorHttp(400, 'No se puede reservar una hora que ya pasó');
+  }
+
   // A. Bloquear la fila del barbero para que dos reservas simultáneas
   //    del mismo barbero no puedan saltarse la validación de solapamiento.
   const barberoRes = await client.query(
@@ -272,6 +294,21 @@ const validarCita = async (client, {
     throw errorHttp(404, 'Servicio no encontrado');
   }
   const { duracion_minutos: duracionMinutos, precio } = servicioRes.rows[0];
+
+  // B2. El barbero tiene que ofrecer ese servicio. La web solo muestra los
+  //     barberos que lo ofrecen, pero el servidor no lo comprobaba. Si un
+  //     barbero aún no tiene ningún servicio asignado se le deja reservar
+  //     cualquiera, para no bloquear las agendas que todavía no lo configuran.
+  const ofertaRes = await client.query(
+    `SELECT COUNT(*)::int AS total,
+            COUNT(*) FILTER (WHERE "servicioID" = $2)::int AS ofrece
+     FROM barbero_servicio
+     WHERE "barberoID" = $1`,
+    [barberoId, servicioId]
+  );
+  if (ofertaRes.rows[0].total > 0 && ofertaRes.rows[0].ofrece === 0) {
+    throw errorHttp(400, 'Este barbero no ofrece ese servicio');
+  }
   const fechaFin = new Date(fechaInicio.getTime() + duracionMinutos * 60 * 1000);
 
   // C. Días en los que la peluquería no abre.
@@ -297,10 +334,29 @@ const validarCita = async (client, {
     throw errorHttp(400, `No se puede reservar: ${feriadoRes.rows[0].nombre}.`);
   }
 
+  // C2. Permisos del barbero (vacaciones, permiso médico...): ese barbero no
+  //     atiende ningún día del permiso, aunque la peluquería esté abierta.
+  const ausenciaRes = await client.query(
+    `SELECT to_char(fecha_inicio, 'DD/MM') AS desde, to_char(fecha_fin, 'DD/MM') AS hasta
+     FROM ausencia_barbero
+     WHERE "barberoID" = $1 AND $2::date BETWEEN fecha_inicio AND fecha_fin
+     LIMIT 1`,
+    [barberoId, fechaYmd(fechaInicio)]
+  );
+  if (ausenciaRes.rows.length > 0) {
+    const { desde, hasta } = ausenciaRes.rows[0];
+    throw errorHttp(
+      400,
+      desde === hasta
+        ? `El barbero no atiende ese día (permiso el ${desde}).`
+        : `El barbero no atiende esos días (permiso del ${desde} al ${hasta}).`
+    );
+  }
+
   // D. La cita debe caer dentro del horario laboral configurado para ese día.
   const dia = nombreDia(fechaInicio);
   const horarioRes = await client.query(
-    `SELECT hora_inicio, hora_fin
+    `SELECT hora_inicio, hora_fin, almuerzo_inicio, almuerzo_fin
      FROM horario_laboral
      WHERE "barberoID" = $1 AND dia_semana = $2`,
     [barberoId, dia]
@@ -324,27 +380,25 @@ const validarCita = async (client, {
     throw errorHttp(400, `La cita está fuera del horario laboral del barbero (${horaInicio} - ${horaFin})`);
   }
 
-  // E. Solapamiento: el intervalo [fecha_inicio, fecha_fin) de la nueva cita
-  //    contra las citas existentes del mismo barbero. Las canceladas no bloquean.
-  const paramsCruce = [barberoId, fechaInicio, fechaFin];
-  let filtroCruce = '';
-
-  // Al reprogramar, la cita que se está moviendo no debe bloquearse a sí misma.
-  if (excluirCitaId) {
-    paramsCruce.push(excluirCitaId);
-    filtroCruce = ` AND "citaID" <> $${paramsCruce.length}`;
+  // D2. Hora de almuerzo: la cita no puede pisarla, ni empezando dentro ni
+  //     terminando dentro ni abarcándola entera.
+  const { almuerzo_inicio: almuerzoInicio, almuerzo_fin: almuerzoFin } = horarioRes.rows[0];
+  if (
+    almuerzoInicio && almuerzoFin &&
+    citaInicioMin < horaAMinutos(almuerzoFin) &&
+    citaFinMin > horaAMinutos(almuerzoInicio)
+  ) {
+    throw errorHttp(
+      400,
+      `La cita se cruza con la hora de almuerzo del barbero (${String(almuerzoInicio).slice(0, 5)} - ${String(almuerzoFin).slice(0, 5)})`
+    );
   }
 
-  const cruce = await client.query(
-    `SELECT "citaID", fecha_inicio, fecha_fin
-     FROM cita
-     WHERE "barberoID" = $1
-       AND estado NOT IN ('cancelada', 'denegada', 'cancelacion_solicitada')
-       AND fecha_inicio < $3
-       AND fecha_fin   > $2${filtroCruce}`,
-    paramsCruce
-  );
-  if (cruce.rows.length > 0) {
+  // E. Solapamiento: el intervalo [fecha_inicio, fecha_fin) de la nueva cita
+  //    contra las citas existentes del mismo barbero. Al reprogramar, la cita
+  //    que se mueve no se bloquea a sí misma. Los estados que liberan la hora
+  //    están en utils/agenda.js (la web usa la misma lista).
+  if (await hayCruce(client, { barberoId, inicio: fechaInicio, fin: fechaFin, excluirCitaId })) {
     throw errorHttp(400, 'El barbero ya tiene una cita que se cruza con ese horario');
   }
 
@@ -373,12 +427,14 @@ const agendarCita = async (client, {
   excluirCitaId = null,
   pagoMetodo = null,
   pagoEstado = null,
+  permitirPasado = false,
 }) => {
   const { fechaFin } = await validarCita(client, {
     barberoId,
     servicioId,
     fechaInicio,
     excluirCitaId,
+    permitirPasado,
   });
 
   // F. Insertar la nueva cita
@@ -400,6 +456,27 @@ const agendarCita = async (client, {
       pagoEstado,
     ]
   );
+
+  // Si esa persona estaba en la lista de espera de este barbero para ese día,
+  // ya consiguió su cita: su entrada sale de la lista.
+  await client.query(
+    `UPDATE lista_espera
+     SET estado = 'atendido'
+     WHERE "barberoID" = $1
+       AND fecha = $2::date
+       AND estado IN ('esperando', 'avisado')
+       AND (
+         ($3::int IS NOT NULL AND "clienteID" = $3)
+         OR ($4::text <> '' AND regexp_replace(telefono, '\\D', '', 'g') = $4)
+       )`,
+    [
+      barberoId,
+      fechaYmd(fechaInicio),
+      esInvitado ? null : clienteId,
+      String(telefonoInvitado || '').replace(/\D/g, ''),
+    ]
+  );
+
   return insercion.rows[0];
 };
 
@@ -547,6 +624,7 @@ const crearCita = async (req, res) => {
         telefonoInvitado: telefonoInvitado || null,
         pagoMetodo: pago ? pago.metodo : null,
         pagoEstado: pago ? pago.estado : null,
+        permitirPasado: rol === 'administrador',
       });
 
       // Con pago móvil, el comprobante se guarda como pago de la cita: queda
@@ -759,35 +837,57 @@ const cancelarCitaPublica = async (req, res) => {
   }
 
   try {
-    const actual = await db.query(
-      'SELECT "citaID", estado FROM cita WHERE codigo = $1',
-      [codigoLimpio]
-    );
+    const resultado = await db.withTransaction(async (client) => {
+      const actual = await client.query(
+        'SELECT "citaID", estado, pago_estado FROM cita WHERE codigo = $1 FOR UPDATE',
+        [codigoLimpio]
+      );
 
-    if (actual.rows.length === 0) {
-      return res.status(404).json({ ok: false, message: 'No hay ninguna cita con ese código' });
-    }
+      if (actual.rows.length === 0) {
+        throw errorHttp(404, 'No hay ninguna cita con ese código');
+      }
 
-    if (!['pendiente', 'confirmada'].includes(actual.rows[0].estado)) {
-      return res.status(400).json({
-        ok: false,
-        message: 'Esta cita ya no se puede cancelar'
-      });
-    }
+      const { citaID, estado, pago_estado: pagoEstado } = actual.rows[0];
 
-    const resultado = await db.query(
-      `UPDATE cita SET estado = 'cancelada' WHERE codigo = $1 RETURNING "citaID";`,
-      [codigoLimpio]
-    );
+      if (!['pendiente', 'confirmada'].includes(estado)) {
+        throw errorHttp(400, 'Esta cita ya no se puede cancelar');
+      }
 
-    const completa = await db.query(`${SELECT_CITA} WHERE c."citaID" = $1`, [resultado.rows[0].citaID]);
+      // Una cita ya pagada no se cancela en seco: igual que con cuenta, pasa
+      // a "cancelación solicitada" y el administrador confirma el reembolso.
+      // Antes quedaba cancelada con el pago "completado" y nadie se enteraba
+      // de que había que devolver el dinero.
+      const pagada = pagoEstado === 'completado';
+      if (pagada) {
+        await client.query(
+          `UPDATE cita
+           SET estado = 'cancelacion_solicitada',
+               cancelacion_motivo = COALESCE($2, 'Cancelada por el cliente desde el enlace de su cita'),
+               cancelacion_solicitada_en = NOW(),
+               cancelacion_reembolsada = false,
+               cancelacion_rechazada_motivo = NULL
+           WHERE "citaID" = $1`,
+          [citaID, typeof req.body?.motivo === 'string' && req.body.motivo.trim() ? req.body.motivo.trim() : null]
+        );
+      } else {
+        await client.query(`UPDATE cita SET estado = 'cancelada' WHERE "citaID" = $1`, [citaID]);
+      }
+
+      const completa = await client.query(`${SELECT_CITA} WHERE c."citaID" = $1`, [citaID]);
+      return { cita: completa.rows[0], pagada };
+    });
 
     res.json({
       ok: true,
-      message: 'Cita cancelada exitosamente',
-      cita: completa.rows[0]
+      message: resultado.pagada
+        ? 'Solicitud de cancelación enviada. El administrador confirmará el reembolso.'
+        : 'Cita cancelada exitosamente',
+      cita: resultado.cita
     });
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ ok: false, message: error.message });
+    }
     errorInterno(res, error, 'Cancelar Cita Publica');
   }
 };
@@ -869,6 +969,7 @@ const reprogramarCita = async (req, res) => {
         servicioId: cita.servicioID,
         fechaInicio,
         excluirCitaId: citaId,
+        permitirPasado: rol === 'administrador',
       });
 
       await client.query(
@@ -927,7 +1028,7 @@ const actualizarEstadoCita = async (req, res) => {
 
   try {
     const actual = await db.query(
-      `SELECT c."citaID", c."clienteID"
+      `SELECT c."citaID", c."clienteID", c.estado, c.pago_estado
        FROM cita c
        WHERE c."citaID" = $1`,
       [citaId]
@@ -937,7 +1038,7 @@ const actualizarEstadoCita = async (req, res) => {
       return res.status(404).json({ ok: false, message: 'Cita no encontrada' });
     }
 
-    const { clienteID } = actual.rows[0];
+    const { clienteID, estado: estadoActual, pago_estado: pagoEstado } = actual.rows[0];
 
     if (rol === 'cliente') {
       if (estado !== 'cancelada') {
@@ -950,6 +1051,21 @@ const actualizarEstadoCita = async (req, res) => {
         return res.status(403).json({
           ok: false,
           message: 'Solo puedes cancelar tus propias citas'
+        });
+      }
+      // Solo se cancela una cita que sigue en pie: antes un cliente podía
+      // pasar a "cancelada" una cita ya completada.
+      if (!['pendiente', 'confirmada'].includes(estadoActual)) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Esta cita ya no se puede cancelar'
+        });
+      }
+      // Con el pago hecho, la cancelación pasa por el reembolso.
+      if (pagoEstado === 'completado') {
+        return res.status(400).json({
+          ok: false,
+          message: 'Esta cita ya está pagada: solicita la cancelación para que el administrador gestione el reembolso'
         });
       }
     } else if (rol === 'barbero') {
@@ -1106,14 +1222,28 @@ const rechazarCancelacionCita = async (req, res) => {
     }
 
     const motivoTexto = typeof motivo === 'string' ? motivo.trim() : null;
-    // Volver a pendiente si no hay otra info; lo más simple es volver a pendiente
-    await db.query(
-      `UPDATE cita
-       SET estado = 'pendiente',
-           cancelacion_rechazada_motivo = $2
-       WHERE "citaID" = $1`,
-      [citaId, motivoTexto],
-    );
+
+    // Mientras la cancelación estaba pedida, la hora quedó libre y otra persona
+    // pudo reservarla. Devolver la cita a la agenda sin mirarlo dejaba dos
+    // citas a la misma hora con el mismo barbero.
+    const libre = await db.withTransaction(async (client) => {
+      if (!(await horaSigueLibre(client, citaId))) return false;
+      await client.query(
+        `UPDATE cita
+         SET estado = 'pendiente',
+             cancelacion_rechazada_motivo = $2
+         WHERE "citaID" = $1`,
+        [citaId, motivoTexto],
+      );
+      return true;
+    });
+
+    if (!libre) {
+      return res.status(409).json({
+        ok: false,
+        message: 'La hora de esta cita ya la tomó otra reserva: no se puede devolver a la agenda. Confirma el reembolso para cancelarla y acuerda otra hora con el cliente.',
+      });
+    }
 
     const completa = await db.query(`${SELECT_CITA} WHERE c."citaID" = $1`, [citaId]);
     res.json({

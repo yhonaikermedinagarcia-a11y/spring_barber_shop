@@ -4,6 +4,7 @@ import { mensajeDeError } from '../../api/client'
 import { precio, aNumero } from '../../utils/formato'
 import { tarjeta } from '../../ui/estilos'
 import { Histograma, HistogramaHorizontal } from '../../components/Graficos'
+import ExportarExcel from '../../components/ExportarExcel'
 
 function Kpi({ etiqueta, valor, detalle, acento = 'text-cream-50' }) {
   return (
@@ -70,6 +71,8 @@ export default function AdminResumen() {
 
   return (
     <div className="space-y-6">
+      <ExportarExcel />
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi etiqueta="Citas hoy" valor={resumen.citasHoy} acento="text-gold-300" />
         <Kpi etiqueta="Próximas" valor={resumen.citasProximas} detalle="pendientes + confirmadas" />

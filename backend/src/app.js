@@ -20,6 +20,8 @@ const barberoServicioRoutes = require('./routes/barberoServicioRoutes');
 const transaccionRoutes = require('./routes/transaccionRoutes');
 const feriadoRoutes = require('./routes/feriadoRoutes');
 const estadisticasRoutes = require('./routes/estadisticasRoutes');
+const ausenciaRoutes = require('./routes/ausenciaRoutes');
+const listaEsperaRoutes = require('./routes/listaEsperaRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -66,6 +68,16 @@ const opcionesCors = origenesPermitidos.length
 app.use(cors(opcionesCors));
 app.use(express.json());
 
+/*
+ * Las respuestas de la API no se guardan en caché (ni en el navegador ni en
+ * proxies/CDN): al recargar la página, las citas, pagos y horarios tienen que
+ * venir siempre al día.
+ */
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
 // Rutas de la API
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/servicios', servicioRoutes);
@@ -77,6 +89,8 @@ app.use('/api/barbero-servicios', barberoServicioRoutes);
 app.use('/api/transacciones', transaccionRoutes);
 app.use('/api/feriados', feriadoRoutes);
 app.use('/api/estadisticas', estadisticasRoutes);
+app.use('/api/ausencias', ausenciaRoutes);
+app.use('/api/lista-espera', listaEsperaRoutes);
 
 /*
  * Archivos subidos (comprobantes de pago y fotos de los barberos).
@@ -90,8 +104,15 @@ app.use('/api/estadisticas', estadisticasRoutes);
  * llama a "/api" en el mismo dominio. Con los dos montajes, la URL que se
  * guarda en la base funciona en los dos casos.
  */
-app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
-app.use('/api/uploads', express.static(path.resolve(__dirname, '../uploads')));
+// `nosniff` impide que el navegador "adivine" que un archivo es HTML y lo
+// ejecute; las subidas solo pueden ser imágenes o PDF (ver config/subidas.js).
+const opcionesSubidas = {
+  setHeaders: (res) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  },
+};
+app.use('/uploads', express.static(path.resolve(__dirname, '../uploads'), opcionesSubidas));
+app.use('/api/uploads', express.static(path.resolve(__dirname, '../uploads'), opcionesSubidas));
 
 /*
  * Web compilada (opcional).

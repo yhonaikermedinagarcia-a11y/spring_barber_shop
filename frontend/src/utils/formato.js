@@ -70,7 +70,9 @@ export function formatearFechaLarga(fechaYmd) {
 export function fechaHora(valor) {
   const d = new Date(valor)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
+  // Con el reloj de la peluquería: la cita de las 15:00 se ve a las 15:00
+  // aunque el navegador esté en otra zona horaria.
+  return d.toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: ZONA_HORARIA })
 }
 
 /*
@@ -83,10 +85,8 @@ export function fechaHora(valor) {
  * tal cual, el input mostraría cuatro horas más.
  */
 export function aInputFechaHora(valor) {
-  const d = new Date(valor)
-  if (Number.isNaN(d.getTime())) return ''
-  const dos = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}T${dos(d.getHours())}:${dos(d.getMinutes())}`
+  const local = enHoraLocal(valor)
+  return local ? `${local.ymd}T${local.hm}` : ''
 }
 
 /*
@@ -137,4 +137,44 @@ export function enlaceWhatsAppNumero(telefono, mensaje) {
   if (!digitos) return null
   const texto = encodeURIComponent(mensaje || 'Hola, quiero reservar una cita.')
   return `https://wa.me/${digitos}?text=${texto}`
+}
+
+/*
+ * Zona horaria de la peluquería.
+ *
+ * La base de datos guarda la hora de pared del local (una cita de las 15:00 se
+ * guarda a las 15:00) y la API la manda como un instante. Para saber en qué
+ * día y a qué hora cae una cita hay que mirarla con el reloj del local, no
+ * con el del navegador: si el cliente tiene el teléfono en otra zona horaria
+ * (de viaje, o con la hora del sistema mal puesta), los bloques del horario
+ * se desplazaban y se marcaban como ocupadas horas que estaban libres.
+ */
+export const ZONA_HORARIA = 'America/Caracas'
+
+const formatoLocal = new Intl.DateTimeFormat('en-CA', {
+  timeZone: ZONA_HORARIA,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+})
+
+/**
+ * Día y hora de un instante según el reloj de la peluquería.
+ * @param {Date|string} valor
+ * @returns {{ ymd: string, hm: string, minutos: number } | null}
+ */
+export function enHoraLocal(valor) {
+  const d = valor instanceof Date ? valor : new Date(valor)
+  if (Number.isNaN(d.getTime())) return null
+  const p = Object.fromEntries(formatoLocal.formatToParts(d).map((x) => [x.type, x.value]))
+  const hora = Number(p.hour) % 24
+  const minuto = Number(p.minute)
+  return {
+    ymd: `${p.year}-${p.month}-${p.day}`,
+    hm: `${String(hora).padStart(2, '0')}:${p.minute}`,
+    minutos: hora * 60 + minuto,
+  }
 }

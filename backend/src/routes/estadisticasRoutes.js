@@ -7,4 +7,8 @@ const { verificarToken, verificarRol } = require('../middlewares/authMiddleware'
 // ver los ingresos de la peluquería.
 router.get('/resumen', verificarToken, verificarRol(['administrador']), obtenerResumen);
 
+// Exportación a Excel para la contabilidad (citas, pagos, ingresos y comisiones).
+const { exportarExcel } = require('../controllers/exportarController');
+router.get('/exportar', verificarToken, verificarRol(['administrador']), exportarExcel);
+
 module.exports = router;

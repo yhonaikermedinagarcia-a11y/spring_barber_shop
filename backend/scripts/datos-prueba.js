@@ -247,12 +247,12 @@ const crear = async () => {
 
     const barberoID = idsBarberos[b.correo];
 
-    // Horario: de lunes a sábado, de 9:00 a 18:00.
+    // Horario: de lunes a sábado, de 9:00 a 18:00, con almuerzo de 12:00 a 13:00.
     const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
     for (const dia of dias) {
       await preguntar(
-        `INSERT INTO horario_laboral ("barberoID", dia_semana, hora_inicio, hora_fin)
-         VALUES ($1, $2, '09:00', '18:00')
+        `INSERT INTO horario_laboral ("barberoID", dia_semana, hora_inicio, hora_fin, almuerzo_inicio, almuerzo_fin)
+         VALUES ($1, $2, '09:00', '18:00', '12:00', '13:00')
          ON CONFLICT ("barberoID", dia_semana) DO NOTHING`,
         [barberoID, dia]
       );

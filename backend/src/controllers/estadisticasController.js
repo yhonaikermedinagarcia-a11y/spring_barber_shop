@@ -12,6 +12,12 @@ const { errorInterno } = require('../utils/respuestaError');
 // Número de meses que se mira hacia atrás para el gráfico de ingresos.
 const MESES_INGRESOS = 6;
 
+/*
+ * Servicios más pedidos y ranking de barberos: antes solo se quitaban las
+ * citas "cancelada", así que las denegadas (pago rechazado) y las que tienen
+ * la cancelación pedida contaban como ingresos y como comisión del barbero.
+ */
+
 const calcularResumen = async () => {
   const resumenFilas = await db.query(`
     SELECT
@@ -78,7 +84,7 @@ const calcularResumen = async () => {
       COALESCE(SUM(s.precio), 0) AS ingresos
     FROM cita c
     JOIN servicios s ON s."serviciosID" = c."servicioID"
-    WHERE c.estado <> 'cancelada'
+    WHERE c.estado NOT IN ('cancelada', 'denegada', 'cancelacion_solicitada')
     GROUP BY s.nombre, s."serviciosID"
     ORDER BY total DESC, s.nombre ASC
     LIMIT 5;
@@ -96,7 +102,7 @@ const calcularResumen = async () => {
       COALESCE(SUM(s.precio) * b.comision / 100, 0) AS "comisionEstimada"
     FROM barbero b
     JOIN usuario u ON u."usuarioID" = b."usuarioID"
-    LEFT JOIN cita c ON c."barberoID" = b."barberoID" AND c.estado <> 'cancelada'
+    LEFT JOIN cita c ON c."barberoID" = b."barberoID" AND c.estado NOT IN ('cancelada', 'denegada', 'cancelacion_solicitada')
     LEFT JOIN servicios s ON s."serviciosID" = c."servicioID"
     GROUP BY b."barberoID", u.nombre, u.apellido, b.estado, b.comision
     ORDER BY citas DESC, u.nombre ASC;

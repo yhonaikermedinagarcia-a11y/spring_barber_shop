@@ -47,7 +47,8 @@ const USUARIOS = [
     nombre: 'Administrador',
     apellido: 'Spring',
     correo: 'admin@springbarber.com',
-    telefono: '04124370853',
+    // No es el WhatsApp público de la web (ver frontend/src/config.js).
+    telefono: '04120000001',
     rol: 'administrador',
     // Variable de entorno que puede forzar la contraseña de esta cuenta.
     envClave: 'SEED_ADMIN_PASSWORD',
@@ -80,12 +81,14 @@ const USUARIOS = [
 // cambiarla después desde el panel (pestaña "Horarios"), pero un despliegue
 // nuevo tiene que empezar con una agenda que sirva.
 const HORARIOS = [
-  { dia: 'lunes', inicio: '09:00', fin: '18:00' },
-  { dia: 'martes', inicio: '09:00', fin: '18:00' },
-  { dia: 'miercoles', inicio: '09:00', fin: '18:00' },
-  { dia: 'jueves', inicio: '09:00', fin: '18:00' },
-  { dia: 'viernes', inicio: '09:00', fin: '18:00' },
-  { dia: 'sabado', inicio: '09:00', fin: '14:00' },
+  // De lunes a viernes, almuerzo de 12:00 a 13:00. El sábado es media
+  // jornada y no lleva almuerzo.
+  { dia: 'lunes', inicio: '09:00', fin: '18:00', almuerzo: ['12:00', '13:00'] },
+  { dia: 'martes', inicio: '09:00', fin: '18:00', almuerzo: ['12:00', '13:00'] },
+  { dia: 'miercoles', inicio: '09:00', fin: '18:00', almuerzo: ['12:00', '13:00'] },
+  { dia: 'jueves', inicio: '09:00', fin: '18:00', almuerzo: ['12:00', '13:00'] },
+  { dia: 'viernes', inicio: '09:00', fin: '18:00', almuerzo: ['12:00', '13:00'] },
+  { dia: 'sabado', inicio: '09:00', fin: '14:00', almuerzo: [null, null] },
 ];
 
 const pool = new Pool(opcionesPool());
@@ -192,9 +195,9 @@ const diaYaTieneHorario = async (barberoId, dia) => {
         continue;
       }
       await pool.query(
-        `INSERT INTO horario_laboral ("barberoID", dia_semana, hora_inicio, hora_fin)
-         VALUES ($1, $2, $3, $4)`,
-        [barberoId, h.dia, h.inicio, h.fin]
+        `INSERT INTO horario_laboral ("barberoID", dia_semana, hora_inicio, hora_fin, almuerzo_inicio, almuerzo_fin)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [barberoId, h.dia, h.inicio, h.fin, h.almuerzo[0], h.almuerzo[1]]
       );
       console.log(`    ✓ horario ${h.dia} ${h.inicio}-${h.fin}`);
     }

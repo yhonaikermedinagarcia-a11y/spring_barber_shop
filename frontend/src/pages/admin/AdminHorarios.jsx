@@ -14,7 +14,14 @@ export default function AdminHorarios() {
   const [error, setError] = useState(null)
   const [aviso, setAviso] = useState(null)
   const [guardando, setGuardando] = useState(false)
-  const [form, setForm] = useState({ dia_semana: DIAS[0], hora_inicio: '09:00', hora_fin: '18:00' })
+  // El almuerzo viene relleno de 12:00 a 13:00; se deja vacío para un día sin almuerzo.
+  const [form, setForm] = useState({
+    dia_semana: DIAS[0],
+    hora_inicio: '09:00',
+    hora_fin: '18:00',
+    almuerzo_inicio: '12:00',
+    almuerzo_fin: '13:00',
+  })
 
   // Horarios cargados y a qué barbero pertenecen: así el estado de "cargando" se
   // deriva comparando el barbero seleccionado con el último cargado, en lugar de
@@ -71,6 +78,8 @@ export default function AdminHorarios() {
         dia_semana: form.dia_semana,
         hora_inicio: form.hora_inicio,
         hora_fin: form.hora_fin,
+        almuerzo_inicio: form.almuerzo_inicio || null,
+        almuerzo_fin: form.almuerzo_fin || null,
       })
       setDatos((prev) => {
         const sinDia = prev.horarios.filter((h) => h.dia_semana !== guardado.dia_semana)
@@ -143,11 +152,31 @@ export default function AdminHorarios() {
               <span className="w-28 capitalize text-cream-50">{h.dia_semana}</span>
               <span className="text-sm text-cream-200/70">
                 {h.hora_inicio.slice(0, 5)} – {h.hora_fin.slice(0, 5)}
+                <span className="block text-xs text-cream-200/50">
+                  {h.almuerzo_inicio && h.almuerzo_fin
+                    ? `Almuerzo ${h.almuerzo_inicio.slice(0, 5)} – ${h.almuerzo_fin.slice(0, 5)}`
+                    : 'Sin almuerzo'}
+                </span>
               </span>
               <button
                 type="button"
+                onClick={() =>
+                  setForm({
+                    dia_semana: h.dia_semana,
+                    hora_inicio: h.hora_inicio.slice(0, 5),
+                    hora_fin: h.hora_fin.slice(0, 5),
+                    almuerzo_inicio: h.almuerzo_inicio ? h.almuerzo_inicio.slice(0, 5) : '',
+                    almuerzo_fin: h.almuerzo_fin ? h.almuerzo_fin.slice(0, 5) : '',
+                  })
+                }
+                className="ml-auto text-xs uppercase tracking-wider text-gold-300 transition hover:text-gold-200"
+              >
+                Editar
+              </button>
+              <button
+                type="button"
                 onClick={() => quitar(h.dia_semana)}
-                className="ml-auto text-xs uppercase tracking-wider text-red-300 transition hover:text-red-200"
+                className="text-xs uppercase tracking-wider text-red-300 transition hover:text-red-200"
               >
                 Quitar
               </button>
@@ -181,6 +210,28 @@ export default function AdminHorarios() {
             Fin
             <input type="time" name="hora_fin" value={form.hora_fin} onChange={cambio} className={`mt-2 ${inputClase}`} />
           </label>
+        </div>
+
+        <p className={`mt-4 ${etiqueta}`}>Hora de almuerzo</p>
+        <div className="mt-2 grid grid-cols-2 gap-3">
+          <label className={etiqueta}>
+            Desde
+            <input type="time" name="almuerzo_inicio" value={form.almuerzo_inicio} onChange={cambio} className={`mt-2 ${inputClase}`} />
+          </label>
+          <label className={etiqueta}>
+            Hasta
+            <input type="time" name="almuerzo_fin" value={form.almuerzo_fin} onChange={cambio} className={`mt-2 ${inputClase}`} />
+          </label>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <p className="text-xs text-cream-200/50">En ese tramo no se aceptan reservas.</p>
+          <button
+            type="button"
+            onClick={() => setForm((f) => ({ ...f, almuerzo_inicio: '', almuerzo_fin: '' }))}
+            className="text-xs uppercase tracking-wider text-cream-200/60 hover:text-cream-50"
+          >
+            Sin almuerzo
+          </button>
         </div>
 
         {aviso && <p className="mt-4 text-sm text-amber-200">{aviso}</p>}

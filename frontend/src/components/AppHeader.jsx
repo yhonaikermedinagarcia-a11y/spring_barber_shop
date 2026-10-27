@@ -48,14 +48,18 @@ export default function AppHeader() {
           <NavLink to="/reservar" className={enlaceClase} onClick={() => setMenuAbierto(false)}>
             Reservar
           </NavLink>
-          <NavLink to="/mis-citas" className={enlaceClase} onClick={() => setMenuAbierto(false)}>
-            Mis citas
-          </NavLink>
+          {usuario && (
+            <NavLink to="/mis-citas" className={enlaceClase} onClick={() => setMenuAbierto(false)}>
+              Mis citas
+            </NavLink>
+          )}
         </>
       )}
-      <NavLink to="/perfil" className={enlaceClase} onClick={() => setMenuAbierto(false)}>
-        Mi perfil
-      </NavLink>
+      {usuario && (
+        <NavLink to="/perfil" className={enlaceClase} onClick={() => setMenuAbierto(false)}>
+          Mi perfil
+        </NavLink>
+      )}
     </>
   )
 
@@ -80,13 +84,24 @@ export default function AppHeader() {
             <span className="uppercase tracking-wider text-gold-400">{usuario?.rol}</span>
           </span>
 
-          <button
-            type="button"
-            onClick={salir}
-            className="hidden rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-cream-200 transition hover:border-red-400/60 hover:text-red-300 md:inline-flex"
-          >
-            Salir
-          </button>
+          {/* Quien reserva sin cuenta también ve esta cabecera: a esa persona
+              no se le ofrece "Salir" (no hay sesión) sino entrar. */}
+          {usuario ? (
+            <button
+              type="button"
+              onClick={salir}
+              className="hidden rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-cream-200 transition hover:border-red-400/60 hover:text-red-300 md:inline-flex"
+            >
+              Salir
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="hidden rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold uppercase tracking-wider text-cream-200 transition hover:border-gold-400 hover:text-gold-300 md:inline-flex"
+            >
+              Iniciar sesión
+            </Link>
+          )}
 
           <button
             type="button"
@@ -110,13 +125,23 @@ export default function AppHeader() {
 
         <div className="flex flex-col gap-1">{enlaces}</div>
 
-        <button
-          type="button"
-          onClick={salir}
-          className="mt-3 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold uppercase tracking-wider text-cream-200 transition hover:border-red-400/60 hover:text-red-300"
-        >
-          Salir
-        </button>
+        {usuario ? (
+          <button
+            type="button"
+            onClick={salir}
+            className="mt-3 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold uppercase tracking-wider text-cream-200 transition hover:border-red-400/60 hover:text-red-300"
+          >
+            Salir
+          </button>
+        ) : (
+          <Link
+            to="/login"
+            onClick={() => setMenuAbierto(false)}
+            className="mt-3 rounded-full border border-white/15 px-5 py-3 text-center text-sm font-semibold uppercase tracking-wider text-cream-200 transition hover:border-gold-400 hover:text-gold-300"
+          >
+            Iniciar sesión
+          </Link>
+        )}
 
         <Link
           to="/"

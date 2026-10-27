@@ -7,8 +7,10 @@ import { getServiciosDeBarbero } from '../api/barberoServicios'
 import { getFeriados } from '../api/feriados'
 import { getHorariosDeBarbero } from '../api/horarios'
 import { getOcupados, crearCita, crearCitaPublica, reprogramarCita } from '../api/citas'
+import { getAusenciasBarbero, ausenciaDe } from '../api/ausencias'
+import ListaEsperaForm from '../components/ListaEsperaForm'
 import { mensajeDeError } from '../api/client'
-import { precio, duracion, urlImagen, DIAS_SEMANA, formatearFechaLarga } from '../utils/formato'
+import { precio, duracion, urlImagen, DIAS_SEMANA, formatearFechaLarga, enHoraLocal } from '../utils/formato'
 import { fotoBarbero } from '../utils/fotosBarbero'
 import { revisarFecha } from '../utils/calendario'
 import { enlaceWhatsApp } from '../config'
@@ -43,28 +45,56 @@ const aHHMM = (min) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-const pad = (n) => String(n).padStart(2, '0')
-const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-const hm = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
+// Día y hora con el reloj de la peluquería (ver `enHoraLocal`), no con el del
+// navegador.
+const ymd = (d) => enHoraLocal(d)?.ymd ?? ''
+const hm = (d) => enHoraLocal(d)?.hm ?? ''
+
+// Estados de cita que ya no ocupan la hora. Tienen que coincidir con los que
+// el servidor ignora al comprobar el solapamiento (citaController.validarCita):
+// si la web marca como ocupada una hora que el servidor da por libre, el
+// cliente ve bloques tachados que en realidad se pueden reservar.
+const ESTADOS_QUE_LIBERAN = new Set(['cancelada', 'denegada', 'cancelacion_solicitada'])
+
+// Separación de la rejilla de horas que se ofrecen.
+const PASO_REJILLA = 30
 
 /**
  * Genera las horas de inicio posibles dentro de un tramo.
  *
- * El paso es la duración del servicio, no una hora fija: con un paso fijo de
- * 30 minutos, un servicio de 45 ofrecía las 09:00 y las 09:30, que se solapan
- * entre sí. El servidor las rechaza, así que la web ofrecía horas que nunca
- * iban a funcionar. Con el paso igual a la duración, dos citas consecutivas no
- * se pisan nunca.
+ * Antes el paso era la duración del servicio (un servicio de 45 minutos
+ * ofrecía 09:00, 09:45, 10:30...). Eso desalineaba los bloques del resto de
+ * citas: si había una cita de 30 minutos de 09:00 a 09:30, el hueco de las
+ * 09:30 no se ofrecía nunca y se perdía tiempo de la agenda.
+ *
+ * Ahora se ofrece una rejilla fija cada 30 minutos **y**, además, la hora en
+ * la que termina cada cita del día, para aprovechar el hueco que deja. Cada
+ * bloque tiene que caber entero antes del cierre; los que se cruzan con otra
+ * cita se marcan como ocupados al pintarlos (no se quitan, para que el
+ * cliente vea que esa hora existe pero está tomada).
+ *
+ * @param {string} inicio "HH:MM" de apertura
+ * @param {string} fin "HH:MM" de cierre
+ * @param {number} duracionMinutos duración del servicio
+ * Las horas que pisan la hora de almuerzo del barbero (`descansos`) no se
+ * ofrecen: no están "ocupadas", simplemente el barbero no atiende. Tras el
+ * almuerzo se ofrece su hora de fin, para aprovechar el hueco.
+ *
+ * @param {{inicio: number, fin: number}[]} ocupados intervalos del día, en minutos
+ * @param {{inicio: number, fin: number}[]} descansos almuerzo del día, en minutos
  */
-function generarSlots(inicio, fin, duracionMinutos) {
-  const slots = []
+function generarSlots(inicio, fin, duracionMinutos, ocupados = [], descansos = []) {
   const desde = paraMinutos(inicio)
   const hasta = paraMinutos(fin)
-  const paso = Math.max(Number(duracionMinutos) || 30, 15)
-  for (let t = desde; t + paso <= hasta; t += paso) {
-    slots.push(aHHMM(t))
-  }
-  return slots
+  const duracionServicio = Math.max(Number(duracionMinutos) || 30, 5)
+  const candidatos = new Set()
+  for (let t = desde; t < hasta; t += PASO_REJILLA) candidatos.add(t)
+  for (const o of [...ocupados, ...descansos]) if (o.fin > desde && o.fin < hasta) candidatos.add(o.fin)
+  return [...candidatos]
+    .filter((t) => t + duracionServicio <= hasta)
+    .filter((t) => !descansos.some((d) => t < d.fin && t + duracionServicio > d.inicio))
+    .sort((a, b) => a - b)
+    .map(aHHMM)
 }
 
 export default function Reservar() {
@@ -116,12 +146,14 @@ export default function Reservar() {
   const [servicio, setServicio] = useState(null)
   const [barbero, setBarbero] = useState(null)
   const [fecha, setFecha] = useState('')
-  const [hora, setHora] = useState('')
+  const [horaMarcada, setHora] = useState('')
 
   // barberos -> ids de servicios que ofrecen
   const [ofertas, setOfertas] = useState(null)
   const [horarios, setHorarios] = useState(null)
   const [citasBarbero, setCitasBarbero] = useState([])
+  // Permisos (vacaciones...) del barbero elegido: esos días no se ofrecen.
+  const [ausencias, setAusencias] = useState([])
 
   const [ahora, setAhora] = useState(null)
   const [error, setError] = useState(null)
@@ -225,16 +257,51 @@ export default function Reservar() {
     let activo = true
     Promise.all([
       getHorariosDeBarbero(barbero.barberoID),
-      getOcupados(barbero.barberoID, { excluir: reprogramarID }).catch(() => []),
-    ]).then(([h, ocupados]) => {
+      // Solo desde hoy: las citas pasadas no bloquean nada y la lista crecía
+      // sin límite con el historial del barbero.
+      getOcupados(barbero.barberoID, { desde: ymd(new Date()), excluir: reprogramarID }).catch(() => []),
+      getAusenciasBarbero(barbero.barberoID).catch(() => []),
+    ]).then(([h, ocupados, permisos]) => {
       if (!activo) return
       setHorarios(h)
       setCitasBarbero(ocupados)
+      setAusencias(permisos)
     })
     return () => {
       activo = false
     }
   }, [barbero, reprogramarID])
+
+  /*
+   * Al elegir (o cambiar) la fecha se vuelven a pedir las horas ocupadas de
+   * ese día. Las del paso anterior pueden tener varios minutos: si otra
+   * persona reservó mientras tanto, el bloque seguía apareciendo libre y el
+   * servidor lo rechazaba al confirmar. También se refresca cada minuto
+   * mientras se está en este paso, junto con la hora actual (para tachar los
+   * bloques que ya pasaron).
+   */
+  useEffect(() => {
+    if (!barbero || !fecha || pasoActual !== PASO_FECHA) return
+    let activo = true
+    const refrescar = () => {
+      setAhora(new Date())
+      getOcupados(barbero.barberoID, { desde: fecha, hasta: fecha, excluir: reprogramarID })
+        .then((delDia) => {
+          if (!activo) return
+          setCitasBarbero((previas) => [
+            ...previas.filter((c) => ymd(c.fecha_inicio) !== fecha),
+            ...delDia,
+          ])
+        })
+        .catch(() => {})
+    }
+    refrescar()
+    const intervalo = setInterval(refrescar, 60 * 1000)
+    return () => {
+      activo = false
+      clearInterval(intervalo)
+    }
+  }, [barbero, fecha, reprogramarID, pasoActual])
 
   const barberosDisponibles = useMemo(() => {
     if (!servicio || !ofertas) return []
@@ -271,17 +338,29 @@ export default function Reservar() {
     if (!fecha) return []
     const lista = []
     for (const c of citasBarbero) {
-      if (c.estado === 'cancelada') continue
-      const inicio = new Date(c.fecha_inicio)
-      if (Number.isNaN(inicio.getTime()) || ymd(inicio) !== fecha) continue
-      const fin = c.fecha_fin ? new Date(c.fecha_fin) : new Date(inicio.getTime() + 30 * 60000)
+      if (ESTADOS_QUE_LIBERAN.has(c.estado)) continue
+      const inicio = enHoraLocal(c.fecha_inicio)
+      if (!inicio || inicio.ymd !== fecha) continue
+      const fin = c.fecha_fin
+        ? enHoraLocal(c.fecha_fin)
+        : enHoraLocal(new Date(new Date(c.fecha_inicio).getTime() + 30 * 60000))
       lista.push({
-        inicio: inicio.getHours() * 60 + inicio.getMinutes(),
-        fin: fin.getHours() * 60 + fin.getMinutes(),
+        inicio: inicio.minutos,
+        // Una cita que acaba al día siguiente ocupa hasta el final del día.
+        fin: fin && fin.ymd === fecha ? fin.minutos : 24 * 60,
       })
     }
     return lista
   }, [fecha, citasBarbero])
+
+  // Hora de almuerzo del día (si el barbero la tiene configurada).
+  const almuerzoDelDia = useMemo(() => {
+    if (!horarioDelDia?.almuerzo_inicio || !horarioDelDia?.almuerzo_fin) return []
+    return [{
+      inicio: paraMinutos(horarioDelDia.almuerzo_inicio),
+      fin: paraMinutos(horarioDelDia.almuerzo_fin),
+    }]
+  }, [horarioDelDia])
 
   // ¿El hueco [inicio, fin) se cruza con alguna cita ya agendada?
   const seCruza = (inicioMin, finMin) =>
@@ -289,8 +368,14 @@ export default function Reservar() {
 
   const slots = useMemo(() => {
     if (!horarioDelDia || !servicio) return []
-    return generarSlots(horarioDelDia.hora_inicio, horarioDelDia.hora_fin, servicio.duracion_minutos)
-  }, [horarioDelDia, servicio])
+    return generarSlots(
+      horarioDelDia.hora_inicio,
+      horarioDelDia.hora_fin,
+      servicio.duracion_minutos,
+      ocupadosDelDia,
+      almuerzoDelDia,
+    )
+  }, [horarioDelDia, servicio, ocupadosDelDia, almuerzoDelDia])
 
   // Los próximos feriados, para avisar de antemano. Solo los que aún no han
   // pasado y no son más de tres: si no, la lista sería larguísima.
@@ -306,6 +391,27 @@ export default function Reservar() {
   }, [calendario, ahora])
 
   const esHoy = fecha && ahora && ymd(ahora) === fecha
+
+  // Si la hora marcada deja de estar disponible mientras se elige (otra
+  // persona la tomó, o ya pasó) deja de contar como elegida, para no llegar
+  // al final con un error del servidor.
+  const horaSigueLibre = (() => {
+    if (!horaMarcada || !servicio) return false
+    const inicioMin = paraMinutos(horaMarcada)
+    const finMin = inicioMin + (Number(servicio.duracion_minutos) || 30)
+    const tomada = ocupadosDelDia.some((o) => inicioMin < o.fin && finMin > o.inicio)
+    const pasada = esHoy && horaMarcada <= hm(ahora)
+    return !tomada && !pasada && slots.includes(horaMarcada)
+  })()
+  const hora = pasoActual !== PASO_FECHA || horaSigueLibre ? horaMarcada : ''
+
+  // ¿Queda alguna hora que se pueda elegir ese día? Si no, la lista de espera
+  // se muestra destacada.
+  const hayHorasLibres = slots.some((s) => {
+    const inicioMin = paraMinutos(s)
+    const finMin = inicioMin + (Number(servicio?.duracion_minutos) || 30)
+    return !(esHoy && s <= hm(ahora)) && !ocupadosDelDia.some((o) => inicioMin < o.fin && finMin > o.inicio)
+  })
 
   function elegirServicio(s) {
     setServicio(s)
@@ -762,6 +868,16 @@ export default function Reservar() {
                         setHora('')
                         return
                       }
+                      // Días de permiso del barbero (vacaciones, etc.).
+                      if (ausenciaDe(elegida, ausencias)) {
+                        setBloqueo({
+                          fecha: elegida,
+                          motivo: `${barbero.nombre} no atiende ese día. Prueba con otra fecha u otro barbero.`,
+                        })
+                        setFecha('')
+                        setHora('')
+                        return
+                      }
                       setBloqueo(null)
                       setError(null)
                       setFecha(elegida)
@@ -773,6 +889,20 @@ export default function Reservar() {
 
                 {bloqueo && (
                   <p className="mt-5 text-amber-300">{bloqueo.motivo}</p>
+                )}
+
+                {ausencias.length > 0 && (
+                  <p className="mt-4 text-xs text-cream-200/60">
+                    {barbero.nombre} no atiende:{' '}
+                    {ausencias
+                      .map((a) =>
+                        a.fecha_inicio === a.fecha_fin
+                          ? formatearFechaLarga(a.fecha_inicio)
+                          : `del ${formatearFechaLarga(a.fecha_inicio)} al ${formatearFechaLarga(a.fecha_fin)}`,
+                      )
+                      .join(', ')}
+                    .
+                  </p>
                 )}
 
                 {proximosFeriados.length > 0 && (
@@ -792,6 +922,12 @@ export default function Reservar() {
                     <p className="text-xs uppercase tracking-wider text-cream-200/60">
                       Horario del día: {horarioDelDia.hora_inicio.slice(0, 5)} –{' '}
                       {horarioDelDia.hora_fin.slice(0, 5)}
+                      {horarioDelDia.almuerzo_inicio && horarioDelDia.almuerzo_fin && (
+                        <>
+                          {' '}· Almuerzo: {horarioDelDia.almuerzo_inicio.slice(0, 5)} –{' '}
+                          {horarioDelDia.almuerzo_fin.slice(0, 5)}
+                        </>
+                      )}
                     </p>
                     {slots.length === 0 ? (
                       <p className="mt-3 text-cream-200/60">
@@ -826,6 +962,17 @@ export default function Reservar() {
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* Lista de espera: siempre disponible, destacada si el día está lleno. */}
+                {horarioDelDia && !esReprogramar && servicio && barbero && fecha && !cargandoSesion && (
+                  <ListaEsperaForm
+                    barbero={barbero}
+                    servicio={servicio}
+                    fecha={fecha}
+                    conSesion={usuario?.rol === 'cliente'}
+                    lleno={!hayHorasLibres}
+                  />
                 )}
 
                 {error && (
@@ -904,7 +1051,7 @@ export default function Reservar() {
                       onChange={(e) =>
                         setDatosInvitado((d) => ({ ...d, telefono: e.target.value }))
                       }
-                      placeholder="0412-4370853"
+                      placeholder="0414-1234567"
                       className="mt-2 block w-full rounded-xl border border-white/10 bg-ink-800 px-4 py-3 text-cream-50 outline-none focus:border-gold-500"
                     />
                   </label>

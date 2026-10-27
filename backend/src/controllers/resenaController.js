@@ -32,11 +32,20 @@ const obtenerResenasBarbero = async (req, res) => {
          r."resenaID",
          r."barberoID",
          r."autorID",
-         r.calificacion,
+         -- La ficha pública del barbero (ModalBarbero) lee "usuarioID",
+         -- "nombre" y "apellido": sin estos alias las reseñas salían sin
+         -- nombre y el autor no encontraba la suya para editarla.
+         r."autorID" AS "usuarioID",
+         r.calificacion::float AS calificacion,
          r.comentario,
          r.fecha_creacion,
          u.nombre   AS autor_nombre,
-         u.apellido AS autor_apellido
+         u.apellido AS autor_apellido,
+         u.nombre   AS nombre,
+         -- Del apellido solo se publica la inicial ("Ana R."): la reseña es
+         -- pública y no hace falta exponer el nombre completo del cliente.
+         CASE WHEN u.apellido IS NULL OR u.apellido = '' THEN ''
+              ELSE upper(left(u.apellido, 1)) || '.' END AS apellido
        FROM resena r
        JOIN usuario u ON u."usuarioID" = r."autorID"
        WHERE r."barberoID" = $1
@@ -66,7 +75,7 @@ const obtenerTodasResenas = async (req, res) => {
          r."resenaID",
          r."barberoID",
          r."autorID",
-         r.calificacion,
+         r.calificacion::float AS calificacion,
          r.comentario,
          r.fecha_creacion,
          ua.nombre   AS autor_nombre,
@@ -102,12 +111,13 @@ const crearResena = async (req, res) => {
     });
   }
 
+  // De 0.5 a 5, de media en media (la web tiene medias estrellas).
   const puntos = Number(calificacion);
 
-  if (!Number.isInteger(puntos) || puntos < 1 || puntos > 5) {
+  if (!Number.isFinite(puntos) || puntos < 0.5 || puntos > 5 || !Number.isInteger(puntos * 2)) {
     return res.status(400).json({
       ok: false,
-      message: 'La calificación debe ser un número entero del 1 al 5'
+      message: 'La calificación debe ser de 0.5 a 5 estrellas, en pasos de media estrella'
     });
   }
 
@@ -170,7 +180,7 @@ const crearResena = async (req, res) => {
        DO UPDATE SET calificacion = EXCLUDED.calificacion,
                      comentario   = EXCLUDED.comentario,
                      fecha_creacion = now()
-       RETURNING "resenaID", "barberoID", "autorID", calificacion, comentario, fecha_creacion;`,
+       RETURNING "resenaID", "barberoID", "autorID", calificacion::float AS calificacion, comentario, fecha_creacion;`,
       [barberoId, autorId, puntos, comentario ? comentario.trim() : null]
     );
 

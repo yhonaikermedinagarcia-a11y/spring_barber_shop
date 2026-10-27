@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { getBarberos, actualizarBarbero, subirFotoBarbero } from '../api/barberos'
 import { getCitas } from '../api/citas'
@@ -10,6 +11,7 @@ import {
 } from '../api/barberoServicios'
 import { getHorariosDeBarbero, guardarHorario, eliminarHorario } from '../api/horarios'
 import { mensajeDeError } from '../api/client'
+import GestionPermisos from '../components/GestionPermisos'
 import { urlImagen, iniciales, DIAS_SEMANA } from '../utils/formato'
 import { inputClase } from '../ui/estilos'
 import AppHeader from '../components/AppHeader'
@@ -17,7 +19,7 @@ import ListaCitas from '../components/ListaCitas'
 
 const DIAS = DIAS_SEMANA
 
-const pestanas = ['Agenda', 'Horario', 'Servicios', 'Perfil']
+const pestanas = ['Agenda', 'Horario', 'Permisos', 'Servicios', 'Perfil']
 
 export default function PanelBarbero() {
   const { usuario } = useAuth()
@@ -27,7 +29,10 @@ export default function PanelBarbero() {
   const [sinPerfil, setSinPerfil] = useState(false)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
-  const [pestana, setPestana] = useState('Agenda')
+  // La pestaña va en la URL para que una recarga vuelva a la misma pestaña.
+  const [params, setParams] = useSearchParams()
+  const pestana = pestanas.includes(params.get('pestana')) ? params.get('pestana') : 'Agenda'
+  const setPestana = (p) => setParams(p === 'Agenda' ? {} : { pestana: p }, { replace: true })
 
   const [citas, setCitas] = useState([])
   const [horarios, setHorarios] = useState([])
@@ -38,6 +43,9 @@ export default function PanelBarbero() {
     dia_semana: DIAS[0],
     hora_inicio: '09:00',
     hora_fin: '17:00',
+    // Vacíos = sin almuerzo ese día.
+    almuerzo_inicio: '12:00',
+    almuerzo_fin: '13:00',
   })
   const [aviso, setAviso] = useState(null)
 
@@ -106,6 +114,8 @@ export default function PanelBarbero() {
         dia_semana: formHorario.dia_semana,
         hora_inicio: formHorario.hora_inicio,
         hora_fin: formHorario.hora_fin,
+        almuerzo_inicio: formHorario.almuerzo_inicio || null,
+        almuerzo_fin: formHorario.almuerzo_fin || null,
       })
       setHorarios((prev) => {
         const sinDia = prev.filter((h) => h.dia_semana !== guardado.dia_semana)
@@ -249,7 +259,27 @@ export default function PanelBarbero() {
                         </span>
                         <span className="text-sm text-cream-200/70">
                           {h.hora_inicio.slice(0, 5)} – {h.hora_fin.slice(0, 5)}
+                          <span className="block text-xs text-cream-200/50">
+                            {h.almuerzo_inicio && h.almuerzo_fin
+                              ? `Almuerzo ${h.almuerzo_inicio.slice(0, 5)} – ${h.almuerzo_fin.slice(0, 5)}`
+                              : 'Sin almuerzo'}
+                          </span>
                         </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormHorario({
+                              dia_semana: h.dia_semana,
+                              hora_inicio: h.hora_inicio.slice(0, 5),
+                              hora_fin: h.hora_fin.slice(0, 5),
+                              almuerzo_inicio: h.almuerzo_inicio ? h.almuerzo_inicio.slice(0, 5) : '',
+                              almuerzo_fin: h.almuerzo_fin ? h.almuerzo_fin.slice(0, 5) : '',
+                            })
+                          }
+                          className="text-xs uppercase tracking-wider text-gold-300 hover:text-gold-200"
+                        >
+                          Editar
+                        </button>
                         <button
                           type="button"
                           onClick={() => borrarHorario(h.dia_semana)}
@@ -308,6 +338,45 @@ export default function PanelBarbero() {
                         />
                       </label>
                     </div>
+                    <p className="mt-4 text-xs uppercase tracking-wider text-cream-200/70">
+                      Hora de almuerzo
+                    </p>
+                    <div className="mt-2 grid grid-cols-2 gap-3">
+                      <label className="block text-xs uppercase tracking-wider text-cream-200/70">
+                        Desde
+                        <input
+                          type="time"
+                          value={formHorario.almuerzo_inicio}
+                          onChange={(e) =>
+                            setFormHorario((f) => ({ ...f, almuerzo_inicio: e.target.value }))
+                          }
+                          className={`mt-2 ${inputClase}`}
+                        />
+                      </label>
+                      <label className="block text-xs uppercase tracking-wider text-cream-200/70">
+                        Hasta
+                        <input
+                          type="time"
+                          value={formHorario.almuerzo_fin}
+                          onChange={(e) =>
+                            setFormHorario((f) => ({ ...f, almuerzo_fin: e.target.value }))
+                          }
+                          className={`mt-2 ${inputClase}`}
+                        />
+                      </label>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <p className="text-xs text-cream-200/50">En ese tramo no se aceptan reservas.</p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormHorario((f) => ({ ...f, almuerzo_inicio: '', almuerzo_fin: '' }))
+                        }
+                        className="text-xs uppercase tracking-wider text-cream-200/60 hover:text-cream-50"
+                      >
+                        Sin almuerzo
+                      </button>
+                    </div>
                     <button
                       type="submit"
                       className="mt-5 w-full rounded-full bg-gold-500 py-2.5 text-sm font-semibold uppercase tracking-wider text-ink-950 transition hover:bg-gold-400"
@@ -316,6 +385,10 @@ export default function PanelBarbero() {
                     </button>
                   </form>
                 </div>
+              )}
+
+              {pestana === 'Permisos' && miID && (
+                <GestionPermisos barberoFijo={{ barberoID: miID }} />
               )}
 
               {pestana === 'Servicios' && (

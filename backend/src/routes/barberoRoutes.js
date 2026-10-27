@@ -14,10 +14,10 @@ const {
   crearResena,
   eliminarResena
 } = require('../controllers/resenaController');
-const { verificarToken, verificarRol } = require('../middlewares/authMiddleware');
+const { verificarToken, verificarTokenOpcional, verificarRol } = require('../middlewares/authMiddleware');
 const { subirArchivo } = require('../config/subidas');
 
-router.get('/', obtenerBarberos);
+router.get('/', verificarTokenOpcional, obtenerBarberos);
 
 // Dar de alta a un barbero es una acción de administración: es quien decide
 // quién atiende en la peluquería.
@@ -54,6 +54,6 @@ router.post(
   actualizarFotoBarbero
 );
 
-router.get('/:id', obtenerBarberoPorId);
+router.get('/:id', verificarTokenOpcional, obtenerBarberoPorId);
 
 module.exports = router;

@@ -9,6 +9,21 @@ const { rutaPublica } = require('../config/subidas');
  * La usan el listado, el detalle y las respuestas de las acciones que lo
  * modifican, para que todas devuelvan los mismos campos.
  */
+/*
+ * El correo y el teléfono de la **cuenta** del barbero son datos personales:
+ * el listado es público (lo usa la portada) y con esos dos datos se podía
+ * pedir la recuperación de la contraseña de esa cuenta. Solo los ve el
+ * administrador o el propio barbero; el público ve el teléfono de contacto
+ * de la ficha (`telefono_contacto`), que es el que el barbero decide mostrar.
+ */
+const sinDatosPrivados = (fila, usuario) => {
+  if (usuario?.rol === 'administrador' || (usuario && usuario.usuarioID === fila.usuarioID)) {
+    return fila;
+  }
+  const { correo, telefono, ...publico } = fila;
+  return publico;
+};
+
 const SELECT_BARBERO = `
   SELECT
     b."barberoID",
@@ -23,9 +38,18 @@ const SELECT_BARBERO = `
     b.especialidad,
     b.instagram,
     b.telefono_contacto,
-    b.foto_url
+    b.foto_url,
+    -- Calificación media y número de reseñas: las tarjetas de la portada los
+    -- muestran, pero la API no los mandaba y todos salían con 0 estrellas.
+    COALESCE(rs.promedio, 0)::float AS promedio_calificacion,
+    COALESCE(rs.total, 0)::int      AS total_resenas
   FROM barbero b
   JOIN usuario u ON u."usuarioID" = b."usuarioID"
+  LEFT JOIN (
+    SELECT "barberoID", ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total
+    FROM resena
+    GROUP BY "barberoID"
+  ) rs ON rs."barberoID" = b."barberoID"
 `;
 
 // 1. Obtener todos los barberos
@@ -36,7 +60,7 @@ const obtenerBarberos = async (req, res) => {
     res.json({
       ok: true,
       total: resultado.rows.length,
-      barberos: resultado.rows
+      barberos: resultado.rows.map((fila) => sinDatosPrivados(fila, req.usuario))
     });
   } catch (error) {
     errorInterno(res, error, 'Obtener Barberos');
@@ -65,7 +89,7 @@ const obtenerBarberoPorId = async (req, res) => {
       return res.status(404).json({ ok: false, message: 'Barbero no encontrado' });
     }
 
-    res.json({ ok: true, barbero: resultado.rows[0] });
+    res.json({ ok: true, barbero: sinDatosPrivados(resultado.rows[0], req.usuario) });
   } catch (error) {
     errorInterno(res, error, 'Obtener Barbero Por Id');
   }

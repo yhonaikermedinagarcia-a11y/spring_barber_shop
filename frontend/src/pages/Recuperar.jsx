@@ -84,6 +84,10 @@ export default function Recuperar() {
             <p className="mt-1 text-sm text-cream-200/60">
               Confirma tu identidad con el correo y el teléfono de tu cuenta.
             </p>
+            <p className="mt-2 text-xs text-cream-200/50">
+              Las cuentas de barbero y de administración no se recuperan desde aquí:
+              pide al administrador que te asigne una contraseña nueva.
+            </p>
 
             <label className="mt-6 block text-xs uppercase tracking-wider text-cream-200/70">
               Correo

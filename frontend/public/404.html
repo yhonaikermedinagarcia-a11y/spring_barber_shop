@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Spring Barber Shop</title>
+    <!--
+      Respaldo para hostings estáticos sin la regla "/* -> /index.html".
+      Al recargar en /admin, /mis-citas, /cita/<codigo>... el servidor no
+      encuentra el archivo y sirve esta página. Se guarda la ruta pedida y se
+      vuelve a la raíz; el script de index.html la restaura y react-router
+      pinta la página correcta. Con la reescritura configurada, esta página
+      nunca se usa.
+    -->
+    <script>
+      try {
+        sessionStorage.setItem(
+          'spa:ruta',
+          location.pathname + location.search + location.hash
+        )
+      } catch (e) {}
+      location.replace('/')
+    </script>
+  </head>
+  <body></body>
+</html>

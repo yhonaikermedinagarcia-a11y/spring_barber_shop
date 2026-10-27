@@ -5,6 +5,26 @@ const db = require('../config/db');
 // Roles que admite la columna `usuario.rol` (CHECK en el esquema).
 const ROLES = ['cliente', 'barbero', 'administrador'];
 
+/*
+ * El correo se guarda en minúsculas y sin espacios. Antes se guardaba tal
+ * cual: "Cliente@x.com" y "cliente@x.com" eran dos cuentas distintas y el
+ * login fallaba si se escribía con otra mayúscula.
+ */
+const normalizarCorreo = (valor) => (typeof valor === 'string' ? valor.trim().toLowerCase() : valor);
+const correoValido = (valor) => typeof valor === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
+const CLAVE_MINIMA = 6;
+
+// ¿Ya hay otra cuenta con ese correo (sin distinguir mayúsculas)?
+const correoOcupado = async (correo, excluirId = null) => {
+  const { rows } = await db.query(
+    'SELECT 1 FROM usuario WHERE lower(trim(correo)) = $1 AND ($2::int IS NULL OR "usuarioID" <> $2) LIMIT 1',
+    [correo, excluirId]
+  );
+  return rows.length > 0;
+};
+
+const MENSAJE_CORREO_USADO = 'El correo electrónico ya está registrado';
+
 // 1. Obtener todos los usuarios
 const obtenerUsuarios = async (req, res) => {
   try {
@@ -60,7 +80,8 @@ const obtenerUsuarioPorId = async (req, res) => {
 // (verificarTokenOpcional deja req.usuario vacío cuando no hay token). Para
 // todo el mundo, el alta es de cliente.
 const crearUsuario = async (req, res) => {
-  const { nombre, apellido, correo, telefono, rol } = req.body || {};
+  const { nombre, apellido, telefono, rol } = req.body || {};
+  const correo = normalizarCorreo(req.body?.correo);
   // `clave` es el nombre histórico de esta columna, pero /api/auth/login recibe la
   // misma cosa como `password`. Aceptar ambos evita que un cliente que use
   // `password` (como es lo natural en un login) reciba un 400 confuso.
@@ -80,6 +101,10 @@ const crearUsuario = async (req, res) => {
       ok: false,
       message: 'La clave debe ser un texto'
     });
+  }
+
+  if (!correoValido(correo)) {
+    return res.status(400).json({ ok: false, message: 'El correo electrónico no es válido' });
   }
 
   const rolSolicitado = typeof rol === 'string' ? rol.trim() : '';
@@ -108,6 +133,19 @@ const crearUsuario = async (req, res) => {
   }
 
   try {
+    if (await correoOcupado(correo)) {
+      return res.status(400).json({ ok: false, message: MENSAJE_CORREO_USADO });
+    }
+
+    // La misma regla que la recuperación y el cambio de clave del perfil: antes
+    // el alta aceptaba claves de un carácter.
+    if (clave.length < CLAVE_MINIMA) {
+      return res.status(400).json({
+        ok: false,
+        message: `La clave debe tener al menos ${CLAVE_MINIMA} caracteres`
+      });
+    }
+
     // La clave se almacena como hash bcrypt, nunca en texto plano. El RETURNING no
     // incluye `clave`, así que la respuesta nunca la expone.
     const claveHasheada = await bcrypt.hash(clave, 10);
@@ -181,7 +219,8 @@ const crearUsuario = async (req, res) => {
 const actualizarUsuario = async (req, res) => {
   const { id } = req.params;
   const usuarioId = Number(id);
-  const { nombre, apellido, correo, telefono, rol } = req.body || {};
+  const { nombre, apellido, telefono, rol } = req.body || {};
+  const correo = req.body?.correo ? normalizarCorreo(req.body.correo) : undefined;
   // Mismo alias que en crearUsuario: `clave` o `password` funcionan igual
   const clave = req.body?.clave || req.body?.password;
 
@@ -198,6 +237,13 @@ const actualizarUsuario = async (req, res) => {
       ok: false,
       message: 'La clave debe ser un texto'
     });
+  }
+
+  if (correo !== undefined && !correoValido(correo)) {
+    return res.status(400).json({ ok: false, message: 'El correo electrónico no es válido' });
+  }
+  if (clave && clave.length < CLAVE_MINIMA) {
+    return res.status(400).json({ ok: false, message: `La clave debe tener al menos ${CLAVE_MINIMA} caracteres` });
   }
 
   // El rol tiene que ser uno de los que admite el CHECK del esquema: si no,
@@ -286,6 +332,9 @@ const actualizarUsuario = async (req, res) => {
       usuario: resultado.usuario
     });
   } catch (error) {
+    if (error.code === '23505') {
+      return res.status(400).json({ ok: false, message: MENSAJE_CORREO_USADO });
+    }
     errorInterno(res, error, 'Actualizar Usuario');
   }
 };
@@ -298,7 +347,8 @@ const actualizarUsuario = async (req, res) => {
 // perfil de otra cuenta con esta ruta.
 const actualizarPerfil = async (req, res) => {
   const usuarioId = req.usuario?.usuarioID;
-  const { nombre, apellido, correo, telefono, claveActual, claveNueva } = req.body || {};
+  const { nombre, apellido, telefono, claveActual, claveNueva } = req.body || {};
+  const correo = normalizarCorreo(req.body?.correo);
 
   if (!usuarioId) {
     return res.status(401).json({ ok: false, message: 'No hay sesión activa' });
@@ -307,7 +357,9 @@ const actualizarPerfil = async (req, res) => {
   // Cambio de contraseña: exige la actual y define la nueva (mínimo 6 caracteres,
   // igual que el alta de usuario y la misma política de bcrypt).
   if (claveActual !== undefined || claveNueva !== undefined) {
-    if (!claveActual || !claveNueva) {
+    // Tienen que ser textos: con un número, bcrypt lanza "Illegal arguments"
+    // y la petición acababa en un 500.
+    if (!claveActual || !claveNueva || typeof claveActual !== 'string' || typeof claveNueva !== 'string') {
       return res.status(400).json({ ok: false, message: 'La clave actual y la nueva son obligatorias' });
     }
     if (String(claveNueva).length < 6) {
@@ -341,7 +393,15 @@ const actualizarPerfil = async (req, res) => {
     });
   }
 
+  if (!correoValido(correo)) {
+    return res.status(400).json({ ok: false, message: 'El correo electrónico no es válido' });
+  }
+
   try {
+    if (await correoOcupado(correo, usuarioId)) {
+      return res.status(400).json({ ok: false, message: MENSAJE_CORREO_USADO });
+    }
+
     const query = `
       UPDATE usuario
       SET nombre = COALESCE($1, nombre),
@@ -363,6 +423,9 @@ const actualizarPerfil = async (req, res) => {
       usuario: resultado.rows[0]
     });
   } catch (error) {
+    if (error.code === '23505') {
+      return res.status(400).json({ ok: false, message: MENSAJE_CORREO_USADO });
+    }
     errorInterno(res, error, 'Actualizar Perfil');
   }
 };

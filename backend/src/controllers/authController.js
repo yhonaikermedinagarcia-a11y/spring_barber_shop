@@ -28,7 +28,9 @@ const login = async (req, res) => {
     // respuesta lo usa: sin él, `apellido` quedaba como undefined y al
     // serializar el JSON se omitía el campo entero.
     const resultado = await db.query(
-      'SELECT "usuarioID", nombre, apellido, correo, clave, rol FROM usuario WHERE correo = $1',
+      // El correo se compara sin distinguir mayúsculas ni espacios: el alta lo
+      // guarda en minúsculas, pero hay cuentas antiguas con mayúsculas.
+      'SELECT "usuarioID", nombre, apellido, correo, clave, rol FROM usuario WHERE lower(trim(correo)) = lower(trim($1)) ORDER BY "usuarioID" LIMIT 1',
       [correo]
     );
 
@@ -155,13 +157,31 @@ const recuperarClave = async (req, res) => {
 
   try {
     const resultado = await db.query(
-      'SELECT "usuarioID", telefono FROM usuario WHERE correo = $1',
-      [correo.trim()]
+      'SELECT "usuarioID", telefono, rol FROM usuario WHERE lower(trim(correo)) = lower(trim($1)) ORDER BY "usuarioID" LIMIT 1',
+      [correo]
     );
 
     const usuario = resultado.rows[0];
+    const digitosCuenta = usuario ? soloDigitos(usuario.telefono) : '';
 
-    if (!usuario || soloDigitos(usuario.telefono) !== soloDigitos(telefono)) {
+    /*
+     * Solo las cuentas de cliente se recuperan desde la web.
+     *
+     * Correo + teléfono no es un secreto: el teléfono del administrador era el
+     * mismo WhatsApp que muestra la web y el de los barberos salía en el
+     * listado público. Con eso cualquiera podía cambiar la clave de una cuenta
+     * con permisos. Las cuentas de administrador y de barbero se recuperan con
+     * `npm run admin:crear` o desde el panel de administración.
+     *
+     * Además, un teléfono con menos de 7 dígitos no cuenta: un teléfono sin
+     * números ("no tengo") "coincidía" con cualquier texto sin números.
+     */
+    if (
+      !usuario ||
+      usuario.rol !== 'cliente' ||
+      digitosCuenta.length < 7 ||
+      digitosCuenta !== soloDigitos(telefono)
+    ) {
       // Mismo mensaje para los dos casos: no se revela qué correos existen.
       return res.status(404).json({
         ok: false,
